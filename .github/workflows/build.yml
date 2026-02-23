@@ -10,6 +10,9 @@ on:
         description: 'Version override (e.g., 1.0.0)'
         required: false
 
+permissions:
+  contents: write
+
 env:
   PYTHON_VERSION: '3.11'
 
