@@ -1,8 +1,7 @@
 # UniReader
 
-一个基于大语言模型的智能论文阅读助手，支持 PDF/Markdown 文档解析、多角度论文解读、分支式对话管理。
-
-![screenshot](assets/17715588026160.jpg)
+一个基于大语言模型的智能论文阅读助手，支持 PDF/Markdown 文档解析、多角度论文解读、并行提问请求、分支式对话管理。
+![](assets/17718607339395.jpg)
 
 ## ✨ 功能特点
 
@@ -12,11 +11,14 @@
 - MinerU API 高质量 PDF 解析（支持公式、表格识别）
 - 本地 PyMuPDF 解析作为备选方案
 - 自动提取论文标题
+![](assets/17718607560903.jpg)
 
 ### 🤖 多角度论文解读
 - 预设多种解读提示词（通用解读、通俗解读、技术细节等）
 - 可自定义添加解读模板
 - 并行请求多个解读角度，提高效率
+![](assets/17718608135408.jpg)
+![](assets/17718610278792.jpg)
 
 ### 💬 分支式对话管理
 - 每个解读角度独立分支，互不干扰
@@ -80,7 +82,7 @@ python run.py
 ```
 
 访问 http://localhost:8000 开始使用。
-
+具体使用方法参考GUIDE.md
 ## ⚙️ 配置说明
 
 ### LLM API 配置
@@ -124,37 +126,6 @@ prompts:
     prompt: |
       请从以下角度解读这篇论文...
     is_enabled: true
-```
-
-## 📁 项目结构
-
-```
-UniReader/
-├── backend/              # 后端模块
-│   ├── config_manager.py # 配置管理
-│   ├── conversation.py   # 对话树管理
-│   ├── llm_client.py     # LLM API 客户端
-│   ├── mineru_client.py  # MinerU API 客户端
-│   ├── models.py         # 数据模型
-│   └── pdf_parser.py     # PDF 解析
-├── core/                 # 核心模块
-│   ├── deps.py          # 依赖管理
-│   └── path_utils.py    # 路径工具
-├── routers/             # API 路由
-│   ├── papers.py        # 论文管理
-│   ├── branches.py      # 分支管理
-│   ├── chat.py          # 对话接口
-│   └── config.py        # 配置接口
-├── static/              # 前端文件
-│   ├── index.html       # 主界面
-│   └── viewer.html      # 对话查看器
-├── data/                # 数据存储
-│   └── papers/          # 论文数据
-├── config.yaml          # 用户配置
-├── main.py              # FastAPI 入口
-├── run.py               # 启动脚本
-├── build.py             # 构建脚本
-└── UniReader.spec       # PyInstaller 配置
 ```
 
 ## 🔧 开发
