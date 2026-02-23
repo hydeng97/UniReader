@@ -45,6 +45,7 @@ jobs:
           cp config.yaml.template dist/UniReader/
           cp README.md dist/UniReader/
           cp GUIDE.md dist/UniReader/
+          cp -r static dist/UniReader/
           mkdir -p dist/UniReader/data/papers
 
       - name: Create archive
@@ -85,6 +86,7 @@ jobs:
           cp config.yaml.template dist/UniReader/
           cp README.md dist/UniReader/
           cp GUIDE.md dist/UniReader/
+          cp -r static dist/UniReader/
           mkdir -p dist/UniReader/data/papers
 
       - name: Create archive
@@ -130,6 +132,7 @@ jobs:
           cp config.yaml.template dist/UniReader/
           cp README.md dist/UniReader/
           cp GUIDE.md dist/UniReader/
+          cp -r static dist/UniReader/
           mkdir -p dist/UniReader/data/papers
 
       - name: Create archive

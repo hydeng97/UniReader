@@ -48,6 +48,9 @@ copy GUIDE.md dist\UniReader\ >nul
 
 if not exist dist\UniReader\data\papers mkdir dist\UniReader\data\papers
 
+if not exist dist\UniReader\static mkdir dist\UniReader\static
+copy static\*.* dist\UniReader\static\ >nul
+
 echo.
 echo ====================================================
 echo Build completed successfully!
