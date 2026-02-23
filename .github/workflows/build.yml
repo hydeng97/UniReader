@@ -1,0 +1,197 @@
+name: Build UniReader
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version override (e.g., 1.0.0)'
+        required: false
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller UniReader.spec --noconfirm
+
+      - name: Copy additional files
+        shell: bash
+        run: |
+          cp config.yaml.template dist/UniReader/
+          cp README.md dist/UniReader/
+          cp GUIDE.md dist/UniReader/
+          mkdir -p dist/UniReader/data/papers
+
+      - name: Create archive
+        run: |
+          cd dist
+          Compress-Archive -Path UniReader -DestinationPath UniReader-Windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniReader-Windows
+          path: dist/UniReader-Windows.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller UniReader.spec --noconfirm
+
+      - name: Copy additional files
+        run: |
+          cp config.yaml.template dist/UniReader/
+          cp README.md dist/UniReader/
+          cp GUIDE.md dist/UniReader/
+          mkdir -p dist/UniReader/data/papers
+
+      - name: Create archive
+        run: |
+          cd dist
+          tar -czvf UniReader-macOS.tar.gz UniReader
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniReader-macOS
+          path: dist/UniReader-macOS.tar.gz
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller UniReader.spec --noconfirm
+
+      - name: Copy additional files
+        run: |
+          cp config.yaml.template dist/UniReader/
+          cp README.md dist/UniReader/
+          cp GUIDE.md dist/UniReader/
+          mkdir -p dist/UniReader/data/papers
+
+      - name: Create archive
+        run: |
+          cd dist
+          tar -czvf UniReader-Linux.tar.gz UniReader
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniReader-Linux
+          path: dist/UniReader-Linux.tar.gz
+
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: UniReader-Windows
+          path: artifacts/
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: UniReader-macOS
+          path: artifacts/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: UniReader-Linux
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: UniReader ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## UniReader ${{ steps.get_version.outputs.VERSION }}
+            
+            ### 下载说明
+            - **Windows**: 下载 `UniReader-Windows.zip`，解压后运行 `UniReader.exe`
+            - **macOS**: 下载 `UniReader-macOS.tar.gz`，解压后运行 `UniReader`
+            - **Linux**: 下载 `UniReader-Linux.tar.gz`，解压后运行 `UniReader`
+            
+            ### 首次运行
+            首次运行会自动创建 `config.yaml` 配置文件，请根据提示配置 LLM API。
+            
+            ### 更新日志
+            请查看 [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          files: |
+            artifacts/UniReader-Windows.zip
+            artifacts/UniReader-macOS.tar.gz
+            artifacts/UniReader-Linux.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

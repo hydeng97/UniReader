@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对话查看</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f6f8fa;
+            color: #24292f;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .header-info {
+            font-size: 12px;
+            color: #656d76;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-branch {
+            font-size: 12px;
+            color: #656d76;
+        }
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1a7f37;
+            flex-shrink: 0;
+        }
+        .sync-indicator.syncing {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .messages-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .messages {
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .message {
+            padding: 16px;
+            border-bottom: 1px solid #d0d7de;
+        }
+        .message:last-child {
+            border-bottom: none;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .message-role {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .message-role.user { color: #0969da; }
+        .message-role.assistant { color: #1a7f37; }
+        .message-time {
+            font-size: 12px;
+            color: #656d76;
+        }
+        .message-content {
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #d0d7de;
+            border-top-color: #0969da;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loading-inline {
+            vertical-align: middle;
+            margin-left: 4px;
+            width: 10px;
+            height: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .markdown-body p { margin: 0 0 8px 0; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 13px;
+        }
+        .markdown-body pre {
+            background: #f6f8fa;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        .markdown-body pre code {
+            background: none;
+            padding: 0;
+        }
+        .markdown-body ul, .markdown-body ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+        .markdown-body li { margin-bottom: 4px; }
+        .markdown-body blockquote {
+            border-left: 3px solid #d0d7de;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #656d76;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 12px 0 8px 0; }
+        .markdown-body h1 { font-size: 20px; }
+        .markdown-body h2 { font-size: 18px; }
+        .markdown-body h3 { font-size: 16px; }
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #d0d7de;
+            padding: 8px;
+            text-align: left;
+        }
+        .markdown-body th { background: #f6f8fa; }
+        .math-display { margin: 12px 0; text-align: center; }
+        .math-inline { }
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .error-state h2 {
+            color: #cf222e;
+            margin-bottom: 8px;
+        }
+        .error-state p { color: #656d76; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #656d76;
+        }
+        .footer {
+            text-align: center;
+            padding: 12px 20px;
+            font-size: 12px;
+            color: #656d76;
+            background: #fff;
+            border-top: 1px solid #d0d7de;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title" id="paper-name">加载中...</div>
+            <div class="header-branch" id="branch-info"></div>
+        </div>
+        <div class="header-info">
+            <span class="sync-indicator" id="sync-indicator"></span>
+            <span id="sync-status">正在同步</span>
+        </div>
+    </div>
+    <div class="main-content" id="main-content">
+        <div class="messages-container">
+            <div class="messages" id="messages">
+                <div class="empty-state">加载中...</div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        此页面为只读视图，请在主页面进行对话
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const paperId = urlParams.get('paper');
+        const branchId = urlParams.get('branch');
+
+        let isDeleted = false;
+        let lastContentHash = '';
+        let userScrolledUp = false;
+
+        const mainContent = document.getElementById('main-content');
+        
+        mainContent.addEventListener('scroll', function() {
+            const scrollBottom = mainContent.scrollHeight - mainContent.scrollTop - mainContent.clientHeight;
+            userScrolledUp = scrollBottom > 100;
+        });
+
+        function renderContent(content, isStreaming) {
+            if (!content) return '';
+            try {
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    const mathBlocks = [];
+                    let idx = 0;
+                    let processed = content
+                        .replace(/\$\$([\s\S]*?)\$\$/g, function(match, math) {
+                            mathBlocks.push('$$' + math + '$$');
+                            return '%%MATHBLOCK' + (idx++) + '%%';
+                        })
+                        .replace(/\$([^\$\n]+?)\$/g, function(match, math) {
+                            mathBlocks.push('$' + math + '$');
+                            return '%%MATHINLINE' + (idx++) + '%%';
+                        });
+                    
+                    let rendered = marked.parse(processed, { gfm: true, breaks: false });
+                    
+                    rendered = rendered.replace(/%%MATHBLOCK(\d+)%%/g, function(match, i) {
+                        return '<div class="math-display">' + mathBlocks[parseInt(i)] + '</div>';
+                    });
+                    rendered = rendered.replace(/%%MATHINLINE(\d+)%%/g, function(match, i) {
+                        return '<span class="math-inline">' + mathBlocks[parseInt(i)] + '</span>';
+                    });
+                    
+                    rendered = DOMPurify.sanitize(rendered, {ADD_TAGS: ['div', 'span'], ADD_ATTR: ['class']});
+                    
+                    if (isStreaming) {
+                        rendered += '<span class="loading loading-inline"></span>';
+                    }
+                    return rendered;
+                }
+            } catch (e) {
+                console.error('Render error:', e);
+            }
+            return escapeHtml(content);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleString('zh-CN');
+        }
+
+        function getContentHash(branch) {
+            const messages = branch.messages || [];
+            return messages.map(function(m) { 
+                return m.id + ':' + (m.content || '').length + ':' + (m.context_tokens || 0);
+            }).join('|');
+        }
+
+        function renderMath() {
+            if (typeof renderMathInElement !== 'undefined') {
+                document.querySelectorAll('.message-content').forEach(function(el) {
+                    renderMathInElement(el, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                    el.querySelectorAll('.math-display, .math-inline').forEach(function(mathEl) {
+                        const text = mathEl.textContent;
+                        const isDisplay = mathEl.classList.contains('math-display');
+                        if (text.startsWith('$$') && text.endsWith('$$')) {
+                            const formula = text.slice(2, -2).trim();
+                            katex.render(formula, mathEl, { displayMode: isDisplay, throwOnError: false });
+                        } else if (text.startsWith('$') && text.endsWith('$')) {
+                            const formula = text.slice(1, -1).trim();
+                            katex.render(formula, mathEl, { displayMode: false, throwOnError: false });
+                        }
+                    });
+                });
+            }
+        }
+
+        function renderMessages(branch) {
+            const container = document.getElementById('messages');
+            const messages = branch.messages || [];
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无消息</div>';
+                lastContentHash = '';
+                return;
+            }
+
+            const newHash = getContentHash(branch);
+            const contentChanged = newHash !== lastContentHash;
+            lastContentHash = newHash;
+
+            if (!contentChanged) return;
+
+            container.innerHTML = messages.map(function(msg) {
+                const roleClass = msg.role === 'user' ? 'user' : 'assistant';
+                const displayName = msg.role === 'user' ? '用户' : (msg.model_name || 'AI');
+                const isStreaming = msg.role === 'assistant' && (!msg.context_tokens && msg.content) || msg._streaming;
+                
+                const tokenInfo = msg.role === 'assistant' && msg.context_tokens 
+                    ? '<span style="font-size:11px;color:#656d76;margin-left:8px">~' + msg.context_tokens + ' tokens</span>' 
+                    : '';
+                
+                const streamingIndicator = isStreaming ? '<span class="loading"></span>' : '';
+                
+                const contentDisplay = msg.content 
+                    ? renderContent(msg.content, isStreaming) 
+                    : '<span style="color:#656d76">等待回复...</span>';
+
+                return '<div class="message">' +
+                    '<div class="message-header">' +
+                        '<span class="message-role ' + roleClass + '">' + displayName + ' ' + streamingIndicator + tokenInfo + '</span>' +
+                        '<span class="message-time">' + formatTime(msg.timestamp) + '</span>' +
+                    '</div>' +
+                    '<div class="message-content">' +
+                        '<div class="markdown-body">' + contentDisplay + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            renderMath();
+
+            if (!userScrolledUp) {
+                setTimeout(function() {
+                    mainContent.scrollTop = mainContent.scrollHeight;
+                }, 10);
+            }
+        }
+
+        function showError(title, message) {
+            isDeleted = true;
+            document.getElementById('sync-indicator').style.background = '#cf222e';
+            document.getElementById('sync-status').textContent = '已断开';
+            document.getElementById('messages').innerHTML = '<div class="error-state"><h2>' + title + '</h2><p>' + message + '</p></div>';
+        }
+
+        async function fetchData() {
+            if (isDeleted) return;
+
+            const indicator = document.getElementById('sync-indicator');
+            const status = document.getElementById('sync-status');
+            const branchInfo = document.getElementById('branch-info');
+            
+            indicator.classList.add('syncing');
+            status.textContent = '同步中...';
+
+            try {
+                const res = await fetch('/api/papers/' + paperId + '/branches/' + branchId);
+                
+                if (res.status === 404) {
+                    showError('分支不存在', '该对话分支已被删除或不存在');
+                    return;
+                }
+
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+
+                const data = await res.json();
+                const branch = data.branch;
+                
+                document.getElementById('paper-name').textContent = data.paper_name || '未命名';
+                branchInfo.textContent = '分支: ' + (branch.name || '未命名');
+                
+                renderMessages(branch);
+                
+                indicator.classList.remove('syncing');
+                indicator.style.background = '#1a7f37';
+                status.textContent = '已同步';
+
+            } catch (e) {
+                console.error('Fetch error:', e);
+                indicator.classList.remove('syncing');
+                indicator.style.background = '#bf8700';
+                status.textContent = '同步失败';
+            }
+        }
+
+        if (!paperId || !branchId) {
+            showError('参数错误', '缺少必要的参数');
+        } else {
+            fetchData();
+            setInterval(fetchData, 1500);
+        }
+    </script>
+</body>
+</html>

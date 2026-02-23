@@ -1,0 +1,3677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>论文阅读助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.2.0/github-markdown.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f6f8fa;
+            color: #24292f;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 280px;
+            background: #fff;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #d0d7de;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 53px;
+            flex-shrink: 0;
+        }
+        .sidebar-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+        }
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .paper-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .paper-item:hover {
+            background: #f6f8fa;
+        }
+        .paper-item.active {
+            background: #ddf4ff;
+            border-left: 3px solid #0969da;
+        }
+        .paper-item .delete-btn {
+            opacity: 0;
+            color: #cf222e;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .paper-item .edit-btn {
+            opacity: 0;
+            cursor: pointer;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .paper-item:hover .delete-btn,
+        .paper-item:hover .edit-btn {
+            opacity: 1;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .main-header {
+            padding: 12px 20px;
+            background: #fff;
+            border-bottom: 1px solid #d0d7de;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 53px;
+            height: auto;
+            flex-shrink: 0;
+        }
+        .main-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+            min-width: 0;
+            margin-right: 16px;
+            word-break: break-word;
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 140px;
+        }
+        .dropdown.show .dropdown-content {
+            display: block;
+        }
+        .dropdown-item {
+            display: block;
+            padding: 8px 14px;
+            font-size: 14px;
+            color: #24292f;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .dropdown-item:hover {
+            background: #f6f8fa;
+        }
+        .dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+        .dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+        .btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #d0d7de;
+            background: #f6f8fa;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: #f3f4f6;
+        }
+        .btn-primary {
+            background: #1f883d;
+            color: #fff;
+            border-color: #1f883d;
+        }
+        .btn-primary:hover {
+            background: #1a7f37;
+        }
+        .btn-secondary {
+            background: #0969da;
+            color: #fff;
+            border-color: #0969da;
+        }
+        .btn-secondary:hover {
+            background: #0860ca;
+        }
+        .btn-danger {
+            color: #cf222e;
+            border-color: #cf222e;
+            background: #fff;
+        }
+        .btn-danger:hover {
+            background: #ffeef0;
+        }
+        .btn-warning {
+            color: #9a6700;
+            border-color: #d4a72c;
+            background: #fff;
+        }
+        .btn-warning:hover {
+            background: #fff8c5;
+        }
+        .btn-success {
+            background: #1f883d;
+            color: #fff;
+            border-color: #1f883d;
+        }
+        .btn-success:hover {
+            background: #1a7f37;
+        }
+        .btn-outline {
+            background: #fff;
+            color: #24292f;
+        }
+        .btn-outline:hover {
+            background: #f6f8fa;
+        }
+        .btn-small {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .branches-panel {
+            width: 240px;
+            min-width: 200px;
+            max-width: 300px;
+            background: #fff;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .branches-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #d0d7de;
+            font-weight: 600;
+            font-size: 14px;
+            height: 53px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        .branches-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            min-height: 0;
+        }
+        .branch-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            min-height: 34px;
+            color: #24292f;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .branch-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .branch-item:hover {
+            background: #f6f8fa;
+            border-color: #d0d7de;
+        }
+        .branch-item.active {
+            background: #ddf4ff;
+            border-color: #54aeff;
+            font-weight: 500;
+        }
+        .branch-item .delete-btn {
+            opacity: 0;
+            color: #cf222e;
+            cursor: pointer;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .branch-item:hover .delete-btn {
+            opacity: 1;
+        }
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            max-width: 100%;
+        }
+        .message {
+            margin-bottom: 20px;
+            max-width: 100%;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .message-role {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .message-role.user {
+            color: #1f883d;
+        }
+        .message-role.assistant {
+            color: #0969da;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #656d76;
+        }
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #f6f8fa;
+            overflow-x: auto;
+            max-width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            box-sizing: border-box;
+        }
+        .message-content.assistant {
+            background: #fff;
+            border: 1px solid #d0d7de;
+        }
+        .message-content {
+            overflow-x: auto;
+            max-width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        .message-content .markdown-body {
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .message-content .markdown-body > *:first-child {
+            margin-top: 0 !important;
+        }
+        .message-content .markdown-body > *:last-child {
+            margin-bottom: 0 !important;
+        }
+        .message-content .markdown-body p {
+            margin: 0 0 0.8em 0 !important;
+            overflow-wrap: break-word;
+        }
+        .message-content .markdown-body pre {
+            white-space: pre !important;
+            overflow-x: auto !important;
+            margin: 0.5em 0 !important;
+            padding: 8px 12px !important;
+        }
+        .message-content .markdown-body pre code {
+            white-space: pre !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+        .message-content .markdown-body code:not(pre code) {
+            padding: 0.2em 0.4em !important;
+            background: rgba(175,184,193,0.2) !important;
+            border-radius: 6px !important;
+            font-size: 85% !important;
+        }
+        .message-content .markdown-body ul,
+        .message-content .markdown-body ol {
+            margin: 0.5em 0 !important;
+            padding-left: 1.5em !important;
+        }
+        .message-content .markdown-body li {
+            margin: 0.2em 0 !important;
+        }
+        .message-content .markdown-body li > ul,
+        .message-content .markdown-body li > ol {
+            margin: 0.2em 0 !important;
+        }
+        .message-content .markdown-body h1 { font-size: 1.5em !important; }
+        .message-content .markdown-body h2 { font-size: 1.3em !important; }
+        .message-content .markdown-body h3 { font-size: 1.15em !important; }
+        .message-content .markdown-body h4 { font-size: 1em !important; }
+        .message-content .markdown-body h1,
+        .message-content .markdown-body h2,
+        .message-content .markdown-body h3,
+        .message-content .markdown-body h4,
+        .message-content .markdown-body h5,
+        .message-content .markdown-body h6 {
+            margin: 0.8em 0 0.4em 0 !important;
+            line-height: 1.25 !important;
+            font-weight: 600 !important;
+        }
+        .message-content .markdown-body h1:first-child,
+        .message-content .markdown-body h2:first-child,
+        .message-content .markdown-body h3:first-child,
+        .message-content .markdown-body h4:first-child {
+            margin-top: 0 !important;
+        }
+        .message-content .markdown-body blockquote {
+            margin: 0.5em 0 !important;
+            padding: 0.3em 1em !important;
+            border-left: 4px solid #d0d7de !important;
+            color: #656d76 !important;
+        }
+        .message-content .markdown-body blockquote p {
+            margin: 0.3em 0 !important;
+        }
+        .message-content .markdown-body table {
+            margin: 0.5em 0 !important;
+            border-collapse: collapse !important;
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .message-content .markdown-body th,
+        .message-content .markdown-body td {
+            padding: 6px 12px !important;
+            border: 1px solid #d0d7de !important;
+        }
+        .message-content .markdown-body a {
+            word-break: break-all;
+        }
+        .message-content .markdown-body pre {
+            max-width: 100%;
+        }
+        .message-content .markdown-body code {
+            word-break: break-all;
+        }
+        .message-content .markdown-body hr {
+            margin: 0.8em 0 !important;
+            border: none !important;
+            border-top: 1px solid #d0d7de !important;
+        }
+        .math-display {
+            display: block;
+            text-align: center;
+            margin: 16px 0;
+            overflow-x: auto;
+        }
+        .math-inline {
+            display: inline;
+        }
+        .copy-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: transparent;
+            border: 1px solid #d0d7de;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        .copy-btn:hover {
+            background: #f6f8fa;
+        }
+        .edit-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: transparent;
+            border: 1px solid #d0d7de;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        .edit-btn:hover {
+            background: #f6f8fa;
+        }
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid #d0d7de;
+            background: #f6f8fa;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+        .input-wrapper textarea {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: none;
+            font-family: inherit;
+        }
+        .input-wrapper textarea:focus {
+            outline: none;
+            border-color: #0969da;
+        }
+        .config-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: #fff;
+            border-left: 1px solid #d0d7de;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+            transition: right 0.3s;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        .config-panel.open {
+            right: 0;
+        }
+        .config-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #d0d7de;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .config-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #656d76;
+        }
+        .config-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+        .config-section {
+            margin-bottom: 24px;
+        }
+        .config-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #d0d7de;
+        }
+        .config-item {
+            padding: 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .config-item.active {
+            border-color: #1a7f37;
+            background-color: #dafbe1;
+        }
+        .config-item.disabled {
+            background-color: #f6f8fa;
+            opacity: 0.7;
+        }
+        .config-item-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .config-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .config-item-name .badge {
+            font-size: 12px;
+            font-weight: normal;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        .badge-active {
+            background-color: #1a7f37;
+            color: white;
+        }
+        .badge-disabled {
+            background-color: #6e7781;
+            color: white;
+        }
+        .config-item-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .config-item-actions button {
+            padding: 2px 8px;
+            font-size: 12px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #656d76;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #656d76;
+            padding: 40px;
+        }
+        .empty-state-content {
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #24292f;
+        }
+        .empty-state p {
+            font-size: 14px;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .upload-area {
+            border: 2px dashed #d0d7de;
+            border-radius: 12px;
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #fff;
+        }
+        .upload-area:hover {
+            border-color: #0969da;
+            background: #f6f8fa;
+        }
+        .upload-area input {
+            display: none;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+        .url-input-area {
+            margin-top: 20px;
+            display: flex;
+            gap: 8px;
+        }
+        .url-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .url-input-area input:focus {
+            outline: none;
+            border-color: #0969da;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .status-badge.uploaded {
+            background: #ddf4ff;
+            color: #0969da;
+        }
+        .status-badge.extracting {
+            background: #fff8c5;
+            color: #9a6700;
+        }
+        .status-badge.extracted {
+            background: #dafbe1;
+            color: #1a7f37;
+        }
+        .status-badge.error {
+            background: #ffeef0;
+            color: #cf222e;
+        }
+        .progress-bar {
+            height: 4px;
+            background: #d0d7de;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #1f883d;
+            transition: width 0.3s;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #d0d7de;
+            border-top-color: #0969da;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .loading-inline {
+            width: 10px;
+            height: 14px;
+            border-width: 1.5px;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 99;
+            display: none;
+        }
+        .overlay.open {
+            display: block;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #d0d7de;
+            margin-bottom: 16px;
+        }
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .tab:hover {
+            color: #0969da;
+        }
+        .tab.active {
+            color: #0969da;
+            border-bottom-color: #0969da;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .sidebar-toggle {
+            display: none;
+            padding: 8px 12px;
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .branches-toggle {
+            display: none;
+            padding: 6px 10px;
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 8px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 1200px) {
+            .branches-panel {
+                width: 200px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                height: 100vh;
+                z-index: 200;
+                transition: left 0.3s;
+            }
+            .sidebar.open {
+                left: 0;
+            }
+            .sidebar-toggle {
+                display: block;
+            }
+            .branches-panel {
+                position: fixed;
+                left: -240px;
+                top: 53px;
+                height: calc(100vh - 53px);
+                z-index: 150;
+                transition: left 0.3s;
+            }
+            .branches-panel.open {
+                left: 0;
+            }
+            .branches-toggle.has-branches {
+                display: inline-block;
+            }
+            .main-header h1 {
+                font-size: 16px;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .btn {
+                padding: 5px 10px;
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 10px 12px;
+            }
+            .header-actions {
+                gap: 4px;
+            }
+            .btn {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            .messages {
+                padding: 12px;
+            }
+            .message-content {
+                padding: 10px 12px;
+            }
+            .input-area {
+                padding: 10px 12px;
+            }
+            .input-wrapper textarea {
+                padding: 8px 10px;
+                font-size: 13px;
+            }
+            .config-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .main-header h1 {
+                font-size: 14px;
+                max-width: 120px;
+            }
+            .branches-toggle {
+                display: none;
+            }
+            .btn {
+                padding: 3px 6px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>UniReader</h2>
+                <button class="btn btn-primary" onclick="showUploadModal()">上传</button>
+            </div>
+            <div class="sidebar-content" id="paper-list"></div>
+        </div>
+        <div class="main">
+            <div class="main-header">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">☰ 菜单</button>
+                    <button class="branches-toggle" onclick="toggleBranches()" id="branches-toggle-btn" style="display:none">分支</button>
+                    <h1 id="current-paper-name">上传文档</h1>
+                    <button class="btn btn-small btn-outline" onclick="editCurrentPaperTitle()" id="edit-title-btn" style="display:none">重命名</button>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="analyzePaper()" id="analyze-btn" style="display:none">开始分析</button>
+                    <div class="dropdown" id="new-branch-dropdown" style="display:none">
+                        <button class="btn btn-secondary" onclick="event.stopPropagation(); toggleNewBranchDropdown()">+ 新建分支 ▾</button>
+                        <div class="dropdown-content">
+                            <button class="dropdown-item" onclick="document.getElementById('new-branch-dropdown').classList.remove('show'); createNewBranch(false)">空白分支</button>
+                            <button class="dropdown-item" onclick="document.getElementById('new-branch-dropdown').classList.remove('show'); createNewBranch(true)">包含文档全文</button>
+                        </div>
+                    </div>
+                    <div class="dropdown" id="summarize-dropdown" style="display:none">
+                        <button class="btn btn-outline" onclick="event.stopPropagation(); toggleSummarizeDropdown()">总结 ▾</button>
+                        <div class="dropdown-content">
+                            <button class="dropdown-item" onclick="document.getElementById('summarize-dropdown').classList.remove('show'); summarize(false)">总结当前分支</button>
+                            <button class="dropdown-item" onclick="document.getElementById('summarize-dropdown').classList.remove('show'); summarize(true)">总结全部分支</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="openBranchInNewWindow()" id="new-window-btn" style="display:none">新窗口</button>
+                    <button class="btn btn-outline" onclick="openConfig()">⚙️ 设置</button>
+                </div>
+            </div>
+            <div class="content-area" id="content-area">
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-state-content">
+                        <h3>欢迎使用 UniReader</h3>
+                        <p>上传论文文档，使用 AI 进行智能解读和问答</p>
+                        <div class="upload-area" onclick="document.getElementById('file-input').click()">
+                            <input type="file" id="file-input" accept=".pdf,.md,.markdown" onchange="uploadFile(event)">
+                            <div class="upload-icon">📄</div>
+                            <p style="font-weight:500;color:#24292f;margin-bottom:4px">点击上传 PDF 或 Markdown 文件</p>
+                            <p style="font-size:12px;color:#656d76">支持 .pdf, .md, .markdown 格式</p>
+                        </div>
+                        <p style="margin:20px 0 12px;color:#656d76;font-size:13px">或输入公网可访问的链接</p>
+                        <div class="url-input-area">
+                            <input type="text" id="pdf-url" placeholder="输入 PDF/Markdown 链接（如 arXiv 链接）">
+                            <button class="btn btn-secondary" onclick="extractFromUrl()">解析链接</button>
+                        </div>
+                        <p style="margin:20px 0 12px;color:#656d76;font-size:13px">批量导入</p>
+                        <div class="url-input-area" style="flex-wrap:wrap;gap:12px">
+                            <input type="file" id="batch-import-input" accept=".json" onchange="handleBatchImport(event)" style="display:none">
+                            <button class="btn btn-outline" onclick="document.getElementById('batch-import-input').click()">📥 导入 JSON 列表</button>
+                            <button class="btn btn-outline" onclick="showBatchImportHelp()">📋 格式说明</button>
+                        </div>
+                        <div id="batch-import-status" style="margin-top:12px;text-align:left;font-size:13px;display:none">
+                            <div style="margin-bottom:8px;font-weight:500">批量导入进度</div>
+                            <div id="batch-import-progress"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="branches-panel" id="branches-panel" style="display:none">
+                    <div class="branches-header">对话分支</div>
+                    <div class="branches-list" id="branches-list"></div>
+                </div>
+                <div class="chat-area" id="chat-area" style="display:none">
+                    <div class="messages" id="messages"></div>
+                    <div class="input-area">
+                        <div class="input-wrapper">
+                            <textarea id="question-input" rows="2" placeholder="输入你的问题..." onkeydown="handleKeyDown(event)"></textarea>
+                            <button class="btn btn-primary" onclick="askQuestion()">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeAllPanels()"></div>
+    <div class="config-panel" id="config-panel">
+        <div class="config-header">
+            <h3>设置</h3>
+            <button class="close-btn" onclick="closeConfig()">&times;</button>
+        </div>
+        <div class="config-content">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('api')">LLM API</div>
+                <div class="tab" onclick="switchTab('mineru')">MinerU</div>
+                <div class="tab" onclick="switchTab('prompts')">提示词</div>
+                <div class="tab" onclick="switchTab('client')">客户端</div>
+            </div>
+            <div class="tab-content active" id="tab-api">
+                <div class="config-section">
+                    <h4>API 配置</h4>
+                    <div id="api-configs"></div>
+                    <button class="btn" onclick="showApiForm()">添加配置</button>
+                </div>
+                <div id="api-form" style="display:none" class="config-item">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" id="api-name">
+                    </div>
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="text" id="api-base-url" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="api-key">
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" id="api-model" placeholder="gpt-4">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveApiConfig()">保存</button>
+                    <button class="btn" onclick="hideApiForm()">取消</button>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-mineru">
+                <div class="config-section">
+                    <h4>MinerU 配置</h4>
+                    <p style="font-size:12px;color:#656d76;margin-bottom:12px">
+                        用于PDF解析。在 <a href="https://mineru.net" target="_blank">mineru.net</a> 获取 Token
+                    </p>
+                    <div id="mineru-configs"></div>
+                    <button class="btn" onclick="showMinerUForm()">添加配置</button>
+                </div>
+                <div id="mineru-form" style="display:none" class="config-item">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" id="mineru-name">
+                    </div>
+                    <div class="form-group">
+                        <label>Token</label>
+                        <input type="password" id="mineru-token">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveMinerUConfig()">保存</button>
+                    <button class="btn" onclick="hideMinerUForm()">取消</button>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-prompts">
+                <div class="config-section">
+                    <h4>解读提示词</h4>
+                    <div id="prompt-configs"></div>
+                    <button class="btn" onclick="showPromptForm()">添加提示词</button>
+                </div>
+                <div id="prompt-form" style="display:none" class="config-item">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" id="prompt-name">
+                    </div>
+                    <div class="form-group">
+                        <label>提示词</label>
+                        <textarea id="prompt-content"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="savePromptConfig()">保存</button>
+                    <button class="btn" onclick="hidePromptForm()">取消</button>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-client">
+                <div class="config-section">
+                    <h4>客户端配置</h4>
+                    <p style="font-size:12px;color:#656d76;margin-bottom:12px">
+                        调整客户端行为参数
+                    </p>
+                    <div class="form-group">
+                        <label>最大并发请求数</label>
+                        <input type="number" id="client-max-concurrent" min="1" max="10" value="5">
+                        <span style="font-size:11px;color:#656d76">同时进行的最大请求数量</span>
+                    </div>
+                    <div class="form-group">
+                        <label>请求超时时间（秒）</label>
+                        <input type="number" id="client-request-timeout" min="30" max="300" value="120">
+                        <span style="font-size:11px;color:#656d76">单个请求的超时时间</span>
+                    </div>
+                    <div class="form-group">
+                        <label>总超时时间（秒）</label>
+                        <input type="number" id="client-total-timeout" min="60" max="600" value="300">
+                        <span style="font-size:11px;color:#656d76">包含重试的总超时时间</span>
+                    </div>
+                    <div class="form-group">
+                        <label>批量导入延迟（秒）</label>
+                        <input type="number" id="client-batch-delay" min="0" max="10" value="2">
+                        <span style="font-size:11px;color:#656d76">批量导入时每个任务之间的延迟</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveClientConfig()">保存配置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPaperId = null;
+        let currentBranchId = null;
+        let papers = [];
+        let branches = [];
+        let messages = {};
+        let pendingRequests = {};
+        let extractingPapers = new Map();
+        let analyzingPapers = new Map();
+        let askingQuestions = new Map();
+        let askingPapers = new Map();
+        let summarizingRequests = new Map();
+        let clientConfig = {
+            max_concurrent_requests: 5,
+            request_timeout: 120,
+            total_request_timeout: 300,
+            cleanup_interval: 60,
+            batch_import_delay: 2
+        };
+        
+        async function loadClientConfig() {
+            try {
+                const res = await fetch('/api/config/client');
+                clientConfig = await res.json();
+            } catch (e) {
+                console.warn('Failed to load client config:', e);
+            }
+        }
+        
+        loadClientConfig();
+
+        function hasActiveRequests(paperId) {
+            const hasQuestion = Array.from(askingQuestions.values()).some(q => q.paperId === paperId);
+            const hasSummary = Array.from(summarizingRequests.values()).some(s => s.paperId === paperId);
+            return hasQuestion || hasSummary;
+        }
+
+        function saveAskingPaperState() {
+            if (!currentPaperId) return;
+            
+            const state = {
+                branches: JSON.parse(JSON.stringify(branches)),
+                currentBranchId: currentBranchId,
+                lastUpdate: Date.now()
+            };
+            askingPapers.set(currentPaperId, state);
+        }
+
+        function restoreAskingPaperState(paperId) {
+            const state = askingPapers.get(paperId);
+            if (!state) return false;
+            
+            branches = JSON.parse(JSON.stringify(state.branches));
+            currentBranchId = state.currentBranchId;
+            return true;
+        }
+
+        function clearAskingPaperState(paperId) {
+            askingPapers.delete(paperId);
+        }
+        
+        function updateAskingPaperState(paperId, branchId, branch) {
+            if (currentPaperId === paperId) {
+                const currentIdx = branches.findIndex(b => b.id === branchId);
+                if (currentIdx >= 0) {
+                    branches[currentIdx] = JSON.parse(JSON.stringify(branch));
+                }
+            }
+            
+            let state = askingPapers.get(paperId);
+            if (!state) {
+                state = { branches: [], currentBranchId: branchId, lastUpdate: Date.now() };
+                askingPapers.set(paperId, state);
+            } else {
+                state.lastUpdate = Date.now();
+            }
+            
+            let savedBranch = state.branches.find(b => b.id === branchId);
+            if (!savedBranch) {
+                savedBranch = JSON.parse(JSON.stringify(branch));
+                state.branches.push(savedBranch);
+            } else {
+                const idx = state.branches.indexOf(savedBranch);
+                state.branches[idx] = JSON.parse(JSON.stringify(branch));
+            }
+        }
+        
+        function cleanupStaleStates() {
+            const now = Date.now();
+            
+            askingQuestions.forEach((q, key) => {
+                if (now - q.startTime > 300000) {
+                    askingQuestions.delete(key);
+                }
+            });
+            
+            summarizingRequests.forEach((s, key) => {
+                if (now - s.startTime > 300000) {
+                    summarizingRequests.delete(key);
+                }
+            });
+            
+            const staleAskingKeys = [];
+            askingPapers.forEach((state, key) => {
+                if (key !== currentPaperId && now - state.lastUpdate > 300000) {
+                    staleAskingKeys.push(key);
+                }
+            });
+            staleAskingKeys.forEach(key => askingPapers.delete(key));
+        }
+
+        async function fetchPapers() {
+            const res = await fetch('/api/papers');
+            papers = await res.json();
+            renderPaperList();
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return '刚刚';
+            if (diffMins < 60) return diffMins + '分钟前';
+            if (diffHours < 24) return diffHours + '小时前';
+            if (diffDays < 7) return diffDays + '天前';
+            
+            return date.toLocaleDateString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+        }
+
+        function renderPaperList() {
+            const list = document.getElementById('paper-list');
+            list.innerHTML = papers.map(p => `
+                <div class="paper-item ${p.id === currentPaperId ? 'active' : ''}" onclick="selectPaper('${p.id}')">
+                    <div style="flex:1;overflow:hidden">
+                        <div style="overflow:hidden;text-overflow:ellipsis">${p.filename || '未命名'}</div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span class="status-badge ${p.status || 'uploaded'}">${getStatusText(p.status)}</span>
+                            <span style="font-size:11px;color:#8b949e">${formatDateTime(p.created_at)}</span>
+                        </div>
+                    </div>
+                    <span class="delete-btn" onclick="event.stopPropagation();deletePaper('${p.id}')">删除</span>
+                </div>
+            `).join('');
+        }
+        
+        async function editCurrentPaperTitle() {
+            if (!currentPaperId) return;
+            
+            const paper = papers.find(p => p.id === currentPaperId);
+            if (!paper) return;
+            
+            const newTitle = prompt('请输入新的标题:', paper.filename);
+            if (newTitle === null || newTitle.trim() === '') return;
+            
+            try {
+                const res = await fetch(`/api/papers/${currentPaperId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename: newTitle.trim()})
+                });
+                if (res.ok) {
+                    paper.filename = newTitle.trim();
+                    renderPaperList();
+                    document.getElementById('current-paper-name').textContent = newTitle.trim();
+                } else {
+                    alert('修改失败');
+                }
+            } catch (e) {
+                alert('修改失败: ' + e.message);
+            }
+        }
+
+        function getStatusText(status) {
+            const map = {
+                'uploaded': '已上传',
+                'extracting': '解析中',
+                'extracted': '已解析',
+                'error': '错误'
+            };
+            return map[status] || status || '已上传';
+        }
+
+        async function selectPaper(paperId) {
+            if (paperId === currentPaperId) return;
+            
+            const oldPaperId = currentPaperId;
+            
+            if (oldPaperId) {
+                const state = {
+                    branches: JSON.parse(JSON.stringify(branches)),
+                    currentBranchId: currentBranchId,
+                    lastUpdate: Date.now()
+                };
+                askingPapers.set(oldPaperId, state);
+            }
+            
+            cleanupStaleStates();
+            
+            currentPaperId = paperId;
+            
+            if (analyzingPapers.has(paperId)) {
+                const state = analyzingPapers.get(paperId);
+                branches = JSON.parse(JSON.stringify(state.branches));
+                currentBranchId = state.currentBranchId;
+                
+                renderPaperList();
+                renderBranches();
+                
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('branches-panel').style.display = 'flex';
+                document.getElementById('chat-area').style.display = 'flex';
+                
+                const res = await fetch(`/api/papers/${paperId}`);
+                const paper = await res.json();
+                
+                document.getElementById('current-paper-name').textContent = paper.filename || '未命名';
+                document.getElementById('edit-title-btn').style.display = 'inline-block';
+                document.getElementById('analyze-btn').style.display = 'none';
+                document.getElementById('new-branch-dropdown').style.display = 'none';
+                document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+                
+                renderMessages();
+                return;
+            }
+            
+            const savedState = askingPapers.get(paperId);
+            if (savedState && hasActiveRequests(paperId)) {
+                branches = JSON.parse(JSON.stringify(savedState.branches));
+                currentBranchId = savedState.currentBranchId;
+                
+                renderPaperList();
+                renderBranches();
+                
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('branches-panel').style.display = 'flex';
+                document.getElementById('chat-area').style.display = 'flex';
+                
+                const res = await fetch(`/api/papers/${paperId}`);
+                const paper = await res.json();
+                
+                document.getElementById('current-paper-name').textContent = paper.filename || '未命名';
+                document.getElementById('edit-title-btn').style.display = 'inline-block';
+                document.getElementById('analyze-btn').style.display = 'none';
+                document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+                
+                renderMessages();
+                return;
+            }
+            
+            currentBranchId = null;
+            branches = [];
+            
+            renderPaperList();
+            renderBranches();
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('branches-panel').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>加载中...</span></div></div></div>';
+            
+            const res = await fetch(`/api/papers/${paperId}`);
+            const paper = await res.json();
+            
+            document.getElementById('current-paper-name').textContent = paper.filename || '未命名';
+            document.getElementById('edit-title-btn').style.display = 'inline-block';
+            
+            const showActions = paper.status === 'extracted';
+            document.getElementById('analyze-btn').style.display = showActions ? 'inline-block' : 'none';
+            document.getElementById('new-branch-dropdown').style.display = 'none';
+            document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+            
+            if (paper.status === 'uploaded' || paper.status === 'extracting') {
+                document.getElementById('branches-panel').style.display = 'none';
+                await extractPaper(paperId);
+            } else if (paper.status === 'extracted') {
+                await loadBranches(paperId);
+            } else if (paper.status === 'error') {
+                document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content" style="color:#cf222e">解析失败，请重新上传</div></div>';
+            }
+        }
+
+        async function extractPaper(paperId) {
+            const messagesDiv = document.getElementById('messages');
+            
+            if (extractingPapers.has(paperId)) {
+                const state = extractingPapers.get(paperId);
+                messagesDiv.innerHTML = state.lastMessage;
+                return;
+            }
+            
+            const extractionState = { lastMessage: '', errorMessage: '' };
+            extractingPapers.set(paperId, extractionState);
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('branches-panel').style.display = 'none';
+            document.getElementById('branches-list').innerHTML = '';
+            renderBranches();
+            document.getElementById('chat-area').style.display = 'flex';
+            
+            const initialMessage = '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在提交解析任务...</span></div></div></div>';
+            messagesDiv.innerHTML = initialMessage;
+            extractionState.lastMessage = initialMessage;
+            
+            const eventSource = new EventSource(`/api/papers/${paperId}/extract`);
+            extractionState.eventSource = eventSource;
+            
+            eventSource.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                let newMessage = '';
+                
+                if (data.status === 'created') {
+                    newMessage = `<div class="message"><div class="message-content">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="loading"></div>
+                            <span>任务已创建，任务ID: ${data.task_id}</span>
+                        </div>
+                        <br><button class="btn" style="margin-top:8px" onclick="useLocalExtraction('${paperId}')">使用本地解析</button>
+                    </div></div>`;
+                } else if (data.status === 'pending') {
+                    newMessage = `<div class="message"><div class="message-content">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="loading"></div>
+                            <span>任务排队中，请稍候...</span>
+                        </div>
+                        <br><button class="btn" style="margin-top:8px" onclick="useLocalExtraction('${paperId}')">使用本地解析</button>
+                    </div></div>`;
+                } else if (data.status === 'running') {
+                    const progress = data.progress || {};
+                    const extracted = progress.extracted_pages || 0;
+                    const total = progress.total_pages || 0;
+                    const percent = total > 0 ? Math.round((extracted / total) * 100) : 0;
+                    newMessage = `<div class="message"><div class="message-content">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                            <div class="loading"></div>
+                            <span>正在解析PDF...</span>
+                        </div>
+                        <div>已解析: ${extracted}/${total} 页 (${percent}%)</div>
+                        <div class="progress-bar" style="margin-top:8px"><div class="progress-bar-fill" style="width:${percent}%"></div></div>
+                        <br><button class="btn" style="margin-top:8px" onclick="useLocalExtraction('${paperId}')">使用本地解析</button>
+                    </div></div>`;
+                } else if (data.status === 'converting') {
+                    newMessage = `<div class="message"><div class="message-content">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="loading"></div>
+                            <span>正在转换格式...</span>
+                        </div>
+                    </div></div>`;
+                } else if (data.status === 'local') {
+                    newMessage = `<div class="message"><div class="message-content">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="loading"></div>
+                            <span>${data.message}</span>
+                        </div>
+                    </div></div>`;
+                } else if (data.status === 'done') {
+                    let titleMsg = data.title_extracted ? '（已自动提取标题）' : '';
+                    newMessage = `<div class="message"><div class="message-content" style="color:#1a7f37">✓ 解析完成${titleMsg}！点击"开始分析"进行论文解读，或点击"新建分支"手动创建对话</div></div>`;
+                    if (currentPaperId === paperId) {
+                        document.getElementById('analyze-btn').style.display = 'inline-block';
+                        document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                        if (data.filename) {
+                            document.getElementById('current-paper-name').textContent = data.filename;
+                        }
+                    }
+                    extractingPapers.delete(paperId);
+                    eventSource.close();
+                    (async () => {
+                        await fetchPapers();
+                        renderPaperList();
+                    })();
+                } else if (data.status === 'error') {
+                    const errorMsg = data.message || '未知错误';
+                    extractionState.errorMessage = errorMsg;
+                    newMessage = `<div class="message"><div class="message-content" style="color:#cf222e">✗ ${errorMsg}</div></div>`;
+                    extractingPapers.delete(paperId);
+                    eventSource.close();
+                    // 自动切换到本地解析
+                    useLocalExtraction(paperId, errorMsg);
+                }
+                
+                if (newMessage) {
+                    extractionState.lastMessage = newMessage;
+                    if (currentPaperId === paperId) {
+                        messagesDiv.innerHTML = newMessage;
+                    }
+                }
+            };
+        }
+        
+        async function useLocalExtraction(paperId, errorMsg = '') {
+            const state = extractingPapers.get(paperId);
+            if (state && state.eventSource) {
+                state.eventSource.close();
+            }
+            extractingPapers.delete(paperId);
+            
+            const messagesDiv = document.getElementById('messages');
+            const errorHtml = errorMsg ? `<div class="message"><div class="message-content" style="color:#cf222e;margin-bottom:8px">✗ ${errorMsg}</div></div>` : '';
+            messagesDiv.innerHTML = errorHtml + '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在使用本地解析器...</span></div></div></div>';
+            
+            const extractionState = { lastMessage: messagesDiv.innerHTML };
+            extractingPapers.set(paperId, extractionState);
+            
+            const eventSource = new EventSource(`/api/papers/${paperId}/extract-local`);
+            extractionState.eventSource = eventSource;
+            
+            eventSource.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                let newMessage = '';
+                
+                if (data.status === 'local') {
+                    newMessage = errorHtml + `<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>${data.message}</span></div></div></div>`;
+                } else if (data.status === 'done') {
+                    let titleMsg = data.title_extracted ? '（已自动提取标题）' : '';
+                    newMessage = `<div class="message"><div class="message-content" style="color:#1a7f37">✓ 解析完成${titleMsg}！点击"开始分析"进行论文解读，或点击"新建分支"手动创建对话</div></div>`;
+                    if (currentPaperId === paperId) {
+                        document.getElementById('analyze-btn').style.display = 'inline-block';
+                        document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                        if (data.filename) {
+                            document.getElementById('current-paper-name').textContent = data.filename;
+                        }
+                    }
+                    extractingPapers.delete(paperId);
+                    eventSource.close();
+                    (async () => {
+                        await fetchPapers();
+                        renderPaperList();
+                    })();
+                } else if (data.status === 'error') {
+                    newMessage = errorHtml + `<div class="message"><div class="message-content" style="color:#cf222e">✗ ${data.message}</div></div>`;
+                    extractingPapers.delete(paperId);
+                    eventSource.close();
+                    (async () => {
+                        await fetchPapers();
+                        renderPaperList();
+                    })();
+                }
+                
+                if (newMessage) {
+                    extractionState.lastMessage = newMessage;
+                    if (currentPaperId === paperId) {
+                        messagesDiv.innerHTML = newMessage;
+                    }
+                }
+            };
+        }
+
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        }
+        
+        function toggleBranches() {
+            document.getElementById('branches-panel').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        }
+        
+        function closeAllPanels() {
+            document.querySelector('.sidebar').classList.remove('open');
+            document.getElementById('branches-panel').classList.remove('open');
+            document.getElementById('config-panel').classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
+        }
+
+        async function loadBranches(paperId) {
+            const res = await fetch(`/api/papers/${paperId}/branches`);
+            const serverBranches = await res.json();
+            
+            const savedStreamingStates = new Map();
+            
+            const savedState = askingPapers.get(paperId);
+            if (savedState && savedState.branches) {
+                savedState.branches.forEach(branch => {
+                    branch.messages.forEach(msg => {
+                        if (msg._streaming || msg._questionId || msg._summarizeId) {
+                            const key = msg.id;
+                            savedStreamingStates.set(key, {
+                                ...msg,
+                                branchId: branch.id
+                            });
+                        }
+                    });
+                });
+            }
+            
+            branches.forEach(branch => {
+                branch.messages.forEach(msg => {
+                    if (msg._streaming || msg._questionId || msg._summarizeId) {
+                        const key = msg.id;
+                        if (!savedStreamingStates.has(key)) {
+                            savedStreamingStates.set(key, {
+                                ...msg,
+                                branchId: branch.id
+                            });
+                        }
+                    }
+                });
+            });
+            
+            branches = serverBranches.map(branch => {
+                const messages = branch.messages || [];
+                const newMessages = [];
+                
+                for (let i = 0; i < messages.length; i++) {
+                    let msg = {...messages[i]};
+                    newMessages.push(msg);
+                    
+                    if (msg.role === 'assistant') {
+                        const savedState = savedStreamingStates.get(msg.id);
+                        if (savedState) {
+                            Object.assign(msg, savedState);
+                        }
+                    }
+                }
+                
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content && !lastMsg._streaming) {
+                    lastMsg._complete = true;
+                }
+                
+                return {...branch, messages: newMessages};
+            });
+            
+            if (savedState && savedState.branches) {
+                savedState.branches.forEach(savedBranch => {
+                    const existingBranch = branches.find(b => b.id === savedBranch.id);
+                    if (existingBranch) {
+                        savedBranch.messages.forEach(savedMsg => {
+                            if (savedMsg._streaming || savedMsg._questionId || savedMsg._summarizeId) {
+                                const msgIdx = existingBranch.messages.findIndex(m => m.id === savedMsg.id);
+                                if (msgIdx >= 0) {
+                                    existingBranch.messages[msgIdx] = {...savedMsg};
+                                } else {
+                                    existingBranch.messages.push({...savedMsg});
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            renderBranches();
+            
+            if (branches.length > 0) {
+                document.getElementById('branches-panel').style.display = 'flex';
+                document.getElementById('branches-toggle-btn').classList.add('has-branches');
+                
+                const branchToSelect = savedState?.currentBranchId || branches[0].id;
+                const branchExists = branches.find(b => b.id === branchToSelect);
+                currentBranchId = branchExists ? branchToSelect : branches[0].id;
+                
+                renderBranches();
+                renderMessages(true);
+                
+                document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+            } else {
+                currentBranchId = null;
+                document.getElementById('branches-panel').style.display = 'flex';
+                document.getElementById('branches-toggle-btn').classList.add('has-branches');
+                document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+                document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content" style="color:#656d76">暂无对话。点击"新建分支"开始对话，或直接在下方输入问题。</div></div>';
+            }
+            renderBranches();
+        }
+
+        function renderBranches() {
+            const list = document.getElementById('branches-list');
+            list.innerHTML = branches.map(b => `
+                <div class="branch-item ${b.id === currentBranchId ? 'active' : ''}" onclick="selectBranch('${b.id}')">
+                    <span class="branch-item-name">${b.name}</span>
+                    <span class="delete-btn" onclick="event.stopPropagation();deleteBranch('${b.id}')">删除</span>
+                </div>
+            `).join('');
+        }
+
+        async function deleteBranch(branchId) {
+            if (!currentPaperId) return;
+            if (!confirm('确定删除此分支？')) return;
+            
+            try {
+                const res = await fetch(`/api/papers/${currentPaperId}/branches/${branchId}`, {method: 'DELETE'});
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert('删除失败: ' + (err.detail || '未知错误'));
+                    await loadBranches(currentPaperId);
+                    return;
+                }
+                const result = await res.json();
+                branches = branches.filter(b => b.id !== branchId);
+                
+                if (branches.length === 0) {
+                    currentBranchId = null;
+                    document.getElementById('branches-panel').style.display = 'none';
+                    document.getElementById('branches-toggle-btn').classList.remove('has-branches');
+                    document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content" style="color:#1a7f37">✓ 解析完成！点击"开始分析"进行论文解读，或点击"新建分支"手动创建对话</div></div>';
+                    document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                    document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+                    renderBranches();
+                } else {
+                    if (currentBranchId === branchId) {
+                        currentBranchId = branches[0].id;
+                    }
+                    renderBranches();
+                    renderMessages();
+                }
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+
+        function selectBranch(branchId) {
+            if (currentBranchId !== branchId) {
+                saveAskingPaperState();
+            }
+            currentBranchId = branchId;
+            renderBranches();
+            if (currentBranchId) {
+                renderMessages(true);
+            }
+        }
+
+        function renderMessages(autoScroll = false) {
+            const branch = branches.find(b => b.id === currentBranchId);
+            if (!branch) {
+                console.warn('renderMessages: Branch not found for', currentBranchId);
+                return;
+            }
+            
+            const messagesDiv = document.getElementById('messages');
+            const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 50;
+            
+            messagesDiv.innerHTML = branch.messages.map(m => {
+                const displayName = m.role === 'user' ? '用户' : (m.model_name || 'AI');
+                const tokenInfo = m.role === 'assistant' && m.context_tokens ? `<span class="token-info" style="font-size:11px;color:#656d76;margin-left:8px">~${m.context_tokens} tokens</span>` : '';
+                let stopBtn = '';
+                if (m._streaming) {
+                    if (m._questionId) {
+                        stopBtn = `<button class="btn btn-danger btn-small" style="margin-left:8px" onclick="stopQuestion('${m._questionId}')">停止</button>`;
+                    } else if (m._summarizeId) {
+                        stopBtn = `<button class="btn btn-danger btn-small" style="margin-left:8px" onclick="stopSummarize('${m._summarizeId}')">停止</button>`;
+                    } else if (currentPaperId) {
+                        stopBtn = `<button class="btn btn-danger btn-small" style="margin-left:8px" onclick="stopGeneration('${currentPaperId}')">停止</button>`;
+                    }
+                }
+                const contentDisplay = m.content ? renderContent(m.content, m._streaming) : '<span style="color:#656d76">等待回复...</span>';
+                
+                let userActions = '';
+                if (m.role === 'user' && !m._streaming) {
+                    userActions = `<button class="edit-btn" onclick="editQuestion('${m.id}', '${branch.id}')" title="编辑问题">✏️</button>`;
+                }
+                
+                return `
+                <div class="message" data-msg-id="${m.id}" data-raw-content="${encodeURIComponent(m.content || '')}">
+                    <div class="message-header">
+                        <span class="message-role ${m.role}">${displayName} ${m._streaming ? '<span class="loading"></span>' : ''}${tokenInfo}${stopBtn}</span>
+                        <div>
+                            <span class="message-time">${new Date(m.timestamp).toLocaleString()}</span>
+                            ${userActions}
+                            ${m.role === 'assistant' && m.content && !m._streaming ? `<button class="copy-btn" onclick="copyContent(this)">复制</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="message-content ${m.role}">
+                        <div class="markdown-body">${contentDisplay}</div>
+                    </div>
+                </div>
+            `}).join('');
+            
+            if (typeof renderMathInElement !== 'undefined') {
+                messagesDiv.querySelectorAll('.message-content').forEach(el => {
+                    renderMathInElement(el, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                    el.querySelectorAll('.math-display, .math-inline').forEach(mathEl => {
+                        const text = mathEl.textContent;
+                        const isDisplay = mathEl.classList.contains('math-display');
+                        if (text.startsWith('$$') && text.endsWith('$$')) {
+                            const formula = text.slice(2, -2).trim();
+                            katex.render(formula, mathEl, { displayMode: isDisplay, throwOnError: false });
+                        } else if (text.startsWith('$') && text.endsWith('$')) {
+                            const formula = text.slice(1, -1).trim();
+                            katex.render(formula, mathEl, { displayMode: false, throwOnError: false });
+                        }
+                    });
+                });
+            }
+            
+            if (autoScroll || wasAtBottom) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+        
+        function renderContent(content, isStreaming) {
+            if (!content) return '';
+            try {
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    const mathBlocks = [];
+                    let idx = 0;
+                    let processed = content
+                        .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+                            mathBlocks.push(`$$${math}$$`);
+                            return `%%MATHBLOCK${idx++}%%`;
+                        })
+                        .replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+                            mathBlocks.push(`$${math}$`);
+                            return `%%MATHINLINE${idx++}%%`;
+                        });
+                    
+                    let rendered = marked.parse(processed, { gfm: true, breaks: false });
+                    
+                    rendered = rendered.replace(/%%MATHBLOCK(\d+)%%/g, (match, i) => {
+                        return `<div class="math-display">${mathBlocks[parseInt(i)]}</div>`;
+                    });
+                    rendered = rendered.replace(/%%MATHINLINE(\d+)%%/g, (match, i) => {
+                        return `<span class="math-inline">${mathBlocks[parseInt(i)]}</span>`;
+                    });
+                    
+                    rendered = DOMPurify.sanitize(rendered, {ADD_TAGS: ['div', 'span'], ADD_ATTR: ['class']});
+                    
+                    if (isStreaming) {
+                        rendered += '<span class="loading loading-inline"></span>';
+                    }
+                    return rendered;
+                }
+                return DOMPurify.sanitize(content.replace(/\n/g, '<br>'));
+            } catch (e) {
+                console.error('Render error:', e);
+                return DOMPurify.sanitize(content.replace(/\n/g, '<br>'));
+            }
+        }
+
+        function copyContent(btn) {
+            const messageDiv = btn.closest('.message');
+            const rawContent = messageDiv.getAttribute('data-raw-content');
+            if (rawContent) {
+                navigator.clipboard.writeText(decodeURIComponent(rawContent));
+            } else {
+                const content = messageDiv.querySelector('.message-content').innerText;
+                navigator.clipboard.writeText(content);
+            }
+            btn.textContent = '已复制';
+            setTimeout(() => btn.textContent = '复制', 1500);
+        }
+
+        async function uploadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            currentPaperId = null;
+            currentBranchId = null;
+            branches = [];
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('branches-panel').style.display = 'none';
+            document.getElementById('branches-list').innerHTML = '';
+            document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在上传文件...</span></div></div></div>';
+            renderBranches();
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const res = await fetch('/api/papers/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await res.json();
+            
+            currentPaperId = data.paper_id;
+            
+            document.getElementById('current-paper-name').textContent = data.filename || '未命名';
+            document.getElementById('edit-title-btn').style.display = 'inline-block';
+            document.getElementById('new-branch-dropdown').style.display = 'none';
+            document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+            
+            await fetchPapers();
+            renderPaperList();
+            
+            if (data.status === 'extracted') {
+                document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content" style="color:#1a7f37">✓ Markdown文件已上传！点击"开始分析"进行论文解读</div></div>';
+                document.getElementById('analyze-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('analyze-btn').style.display = 'none';
+                document.getElementById('messages').innerHTML = '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在解析文件...</span></div></div></div>';
+                await extractPaper(data.paper_id);
+            }
+        }
+
+        async function extractFromUrl() {
+            const url = document.getElementById('pdf-url').value.trim();
+            if (!url) return;
+            
+            currentPaperId = null;
+            currentBranchId = null;
+            branches = [];
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('branches-panel').style.display = 'none';
+            document.getElementById('branches-list').innerHTML = '';
+            document.getElementById('chat-area').style.display = 'flex';
+            renderBranches();
+            
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '<div class="message"><div class="message-content">正在提交解析任务...</div></div>';
+            
+            const res = await fetch('/api/papers/extract-url', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url})
+            });
+            
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let paperId = null;
+            
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                
+                const text = decoder.decode(value);
+                const lines = text.split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6);
+                        if (dataStr === '[DONE]') continue;
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(dataStr);
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', dataStr);
+                            continue;
+                        }
+                        
+                        if (data.status === 'started') {
+                            paperId = data.paper_id;
+                            currentPaperId = paperId;
+                            currentBranchId = null;
+                            branches = [];
+                            
+                            document.getElementById('current-paper-name').textContent = data.filename || '文档';
+                            document.getElementById('edit-title-btn').style.display = 'inline-block';
+                            document.getElementById('analyze-btn').style.display = 'none';
+                            document.getElementById('new-branch-dropdown').style.display = 'none';
+                            document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+                            
+                            messagesDiv.innerHTML = '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在解析文件...</span></div></div></div>';
+                            
+                            fetchPapers().then(() => renderPaperList());
+                        }
+                        
+                        if (currentPaperId !== paperId) continue;
+                        
+                        if (data.status === 'done') {
+                            let titleMsg = data.title_extracted ? '（已自动提取标题）' : '';
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content" style="color:#1a7f37">✓ 解析完成${titleMsg}！点击"开始分析"进行论文解读，或点击"新建分支"手动创建对话</div></div>`;
+                            document.getElementById('analyze-btn').style.display = 'inline-block';
+                            document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                            if (data.filename) {
+                                document.getElementById('current-paper-name').textContent = data.filename;
+                            }
+                            fetchPapers().then(() => renderPaperList());
+                        } else if (data.status === 'created') {
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="loading"></div>
+                                    <span>任务已创建，任务ID: ${data.task_id}</span>
+                                </div>
+                                <br><button class="btn" style="margin-top:8px" onclick="useLocalExtractionFromUrl('${paperId}', '${url}')">使用本地解析</button>
+                            </div></div>`;
+                        } else if (data.status === 'pending') {
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="loading"></div>
+                                    <span>任务排队中，请稍候...</span>
+                                </div>
+                                <br><button class="btn" style="margin-top:8px" onclick="useLocalExtractionFromUrl('${paperId}', '${url}')">使用本地解析</button>
+                            </div></div>`;
+                        } else if (data.status === 'running') {
+                            const progress = data.progress || {};
+                            const extracted = progress.extracted_pages || 0;
+                            const total = progress.total_pages || 0;
+                            const percent = total > 0 ? Math.round((extracted / total) * 100) : 0;
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                                    <div class="loading"></div>
+                                    <span>正在解析PDF...</span>
+                                </div>
+                                <div>已解析: ${extracted}/${total} 页 (${percent}%)</div>
+                                <div class="progress-bar" style="margin-top:8px"><div class="progress-bar-fill" style="width:${percent}%"></div></div>
+                                <br><button class="btn" style="margin-top:8px" onclick="useLocalExtractionFromUrl('${paperId}', '${url}')">使用本地解析</button>
+                            </div></div>`;
+                        } else if (data.status === 'converting') {
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="loading"></div>
+                                    <span>正在转换格式...</span>
+                                </div>
+                            </div></div>`;
+                        } else if (data.status === 'local') {
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="loading"></div>
+                                    <span>${data.message}</span>
+                                </div>
+                            </div></div>`;
+                        } else if (data.status === 'error') {
+                            const errorMsg = data.message || '未知错误';
+                            messagesDiv.innerHTML = `<div class="message"><div class="message-content" style="color:#cf222e">✗ ${errorMsg}</div></div>`;
+                            useLocalExtractionFromUrl(paperId, url, errorMsg);
+                        }
+                    }
+                }
+            }
+        }
+        
+        async function useLocalExtractionFromUrl(paperId, pdfUrl, errorMsg = '') {
+            const messagesDiv = document.getElementById('messages');
+            const errorHtml = errorMsg ? `<div class="message"><div class="message-content" style="color:#cf222e;margin-bottom:8px">✗ ${errorMsg}</div></div>` : '';
+            messagesDiv.innerHTML = errorHtml + '<div class="message"><div class="message-content"><div style="display:flex;align-items:center;gap:8px"><div class="loading"></div><span>正在使用本地解析器...</span></div></div></div>';
+            
+            try {
+                const res = await fetch('/api/papers/extract-url-local', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({paper_id: paperId, url: pdfUrl})
+                });
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    
+                    const text = decoder.decode(value);
+                    const lines = text.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') continue;
+                            
+                            try {
+                                const data = JSON.parse(dataStr);
+                                
+                                if (data.status === 'done') {
+                                    let titleMsg = data.title_extracted ? '（已自动提取标题）' : '';
+                                    messagesDiv.innerHTML = `<div class="message"><div class="message-content" style="color:#1a7f37">✓ 解析完成${titleMsg}！点击"开始分析"进行论文解读，或点击"新建分支"手动创建对话</div></div>`;
+                                    document.getElementById('analyze-btn').style.display = 'inline-block';
+                                    document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                                    if (data.filename) {
+                                        document.getElementById('current-paper-name').textContent = data.filename;
+                                    }
+                                    fetchPapers().then(() => renderPaperList());
+                                } else if (data.status === 'error') {
+                                    messagesDiv.innerHTML = errorHtml + `<div class="message"><div class="message-content" style="color:#cf222e">✗ ${data.message}</div></div>`;
+                                }
+                            } catch (parseErr) {
+                                console.warn('Failed to parse SSE data:', dataStr);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                messagesDiv.innerHTML = errorHtml + `<div class="message"><div class="message-content" style="color:#cf222e">✗ 本地解析失败: ${e.message}</div></div>`;
+            }
+        }
+
+        async function analyzePaper() {
+            const analyzingPaperId = currentPaperId;
+            if (!analyzingPaperId) return;
+            
+            const existingBranches = JSON.parse(JSON.stringify(branches));
+            const existingCurrentBranchId = currentBranchId;
+            
+            analyzingPapers.set(analyzingPaperId, {
+                branches: existingBranches,
+                currentBranchId: existingCurrentBranchId,
+                eventSource: null,
+                completed: 0,
+                total: 0
+            });
+            
+            document.getElementById('branches-panel').style.display = 'flex';
+            document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+            
+            const eventSource = new EventSource(`/api/papers/${analyzingPaperId}/analyze`);
+            const state = analyzingPapers.get(analyzingPaperId);
+            if (state) state.eventSource = eventSource;
+            
+            eventSource.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                const state = analyzingPapers.get(analyzingPaperId);
+                if (!state) return;
+                
+                if (data.status === 'starting') {
+                    state.total++;
+                    const existingBranch = state.branches.find(b => b.id === data.branch_id);
+                    if (!existingBranch) {
+                        state.branches.push({
+                            id: data.branch_id, 
+                            name: data.prompt_name, 
+                            messages: [{
+                                id: 'msg_' + data.branch_id,
+                                role: 'assistant',
+                                content: '',
+                                timestamp: new Date().toISOString(),
+                                is_initial: true,
+                                prompt_name: data.prompt_name,
+                                model_name: data.model_name,
+                                _loading: true,
+                                _streaming: true
+                            }]
+                        });
+                    }
+                    if (!state.currentBranchId) {
+                        state.currentBranchId = data.branch_id;
+                    }
+                    
+                    if (currentPaperId === analyzingPaperId) {
+                        branches = JSON.parse(JSON.stringify(state.branches));
+                        currentBranchId = state.currentBranchId;
+                        renderBranches();
+                        renderMessages();
+                    }
+                } else if (data.chunk) {
+                    const branch = state.branches.find(b => b.id === data.branch_id);
+                    if (branch && branch.messages.length > 0) {
+                        const streamingMsg = branch.messages.find(m => m._streaming);
+                        if (streamingMsg) {
+                            streamingMsg.content += data.chunk;
+                            streamingMsg._loading = false;
+                        }
+                    }
+                    
+                    if (currentPaperId === analyzingPaperId && currentBranchId === data.branch_id) {
+                        branches = JSON.parse(JSON.stringify(state.branches));
+                        renderMessages();
+                    }
+                } else if (data.done && data.message) {
+                    state.completed++;
+                    const branch = state.branches.find(b => b.id === data.branch_id);
+                    if (branch) {
+                        const streamingMsg = branch.messages.find(m => m._streaming);
+                        if (streamingMsg) {
+                            streamingMsg._streaming = false;
+                            streamingMsg._complete = true;
+                            streamingMsg.id = data.message.id;
+                            streamingMsg.content = data.message.content;
+                            streamingMsg.model_name = data.message.model_name;
+                            streamingMsg.context_tokens = data.message.context_tokens;
+                        }
+                    }
+                    
+                    if (currentPaperId === analyzingPaperId) {
+                        branches = JSON.parse(JSON.stringify(state.branches));
+                        renderMessages();
+                    }
+                    
+                    if (state.completed >= state.total && state.total > 0) {
+                        analyzingPapers.delete(analyzingPaperId);
+                        document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+                        document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+                    }
+                } else if (data.error) {
+                    state.completed++;
+                    console.error('Analysis error:', data.error);
+                    const branch = state.branches.find(b => b.id === data.branch_id);
+                    if (branch) {
+                        const streamingMsg = branch.messages.find(m => m._streaming);
+                        if (streamingMsg) {
+                            streamingMsg.content = '❌ 分析失败: ' + data.error;
+                            streamingMsg._streaming = false;
+                            streamingMsg._loading = false;
+                        }
+                    }
+                    
+                    if (currentPaperId === analyzingPaperId && currentBranchId === data.branch_id) {
+                        branches = JSON.parse(JSON.stringify(state.branches));
+                        renderMessages();
+                    }
+                    
+                    if (state.completed >= state.total && state.total > 0) {
+                        analyzingPapers.delete(analyzingPaperId);
+                        document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+                    }
+                }
+            };
+            
+            eventSource.onerror = () => {
+                eventSource.close();
+                const state = analyzingPapers.get(analyzingPaperId);
+                if (state) {
+                    state.branches.forEach(branch => {
+                        branch.messages.forEach(m => {
+                            if (m._streaming) {
+                                m._streaming = false;
+                                m._loading = false;
+                            }
+                        });
+                    });
+                    if (currentPaperId === analyzingPaperId) {
+                        branches = JSON.parse(JSON.stringify(state.branches));
+                        renderMessages();
+                    }
+                }
+                analyzingPapers.delete(analyzingPaperId);
+                document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+            };
+        }
+        
+        function stopGeneration(paperId) {
+            const state = analyzingPapers.get(paperId);
+            if (state && state.eventSource) {
+                state.eventSource.close();
+                state.branches.forEach(branch => {
+                    branch.messages.forEach(m => {
+                        if (m._streaming) {
+                            m._streaming = false;
+                            m._loading = false;
+                            if (!m.content) m.content = '已停止生成';
+                        }
+                    });
+                });
+                if (currentPaperId === paperId) {
+                    branches = JSON.parse(JSON.stringify(state.branches));
+                    renderMessages();
+                }
+                analyzingPapers.delete(paperId);
+                document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+                document.getElementById('new-branch-dropdown').style.display = 'inline-block';
+            }
+        }
+
+        function editQuestion(msgId, branchId) {
+            const branch = branches.find(b => b.id === branchId);
+            if (!branch) return;
+            
+            const msgIdx = branch.messages.findIndex(m => m.id === msgId);
+            if (msgIdx < 0) return;
+            
+            const msg = branch.messages[msgIdx];
+            if (msg.role !== 'user') return;
+            
+            const newQuestion = prompt('编辑问题:', msg.content);
+            if (newQuestion === null || newQuestion.trim() === '' || newQuestion.trim() === msg.content) return;
+            
+            regenerateQuestion(msgId, branchId, newQuestion.trim());
+        }
+
+        async function regenerateQuestion(msgId, branchId, newQuestion) {
+            if (!currentPaperId) return;
+            
+            if (askingQuestions.size >= clientConfig.max_concurrent_requests) {
+                alert('请等待当前请求完成后再提问');
+                return;
+            }
+            
+            const questionId = Date.now().toString();
+            const askingBranchId = branchId;
+            const askingPaperId = currentPaperId;
+            
+            saveAskingPaperState();
+            
+            askingQuestions.set(questionId, {
+                paperId: askingPaperId,
+                branchId: askingBranchId,
+                reader: null,
+                userMsgId: msgId,
+                assistantMsgId: null,
+                startTime: Date.now()
+            });
+            
+            const branch = branches.find(b => b.id === askingBranchId);
+            if (!branch) {
+                askingQuestions.delete(questionId);
+                return;
+            }
+            
+            const msgIdx = branch.messages.findIndex(m => m.id === msgId);
+            if (msgIdx < 0) {
+                askingQuestions.delete(questionId);
+                return;
+            }
+            
+            branch.messages[msgIdx].content = newQuestion;
+            
+            while (msgIdx + 1 < branch.messages.length && branch.messages[msgIdx + 1].role === 'assistant') {
+                branch.messages.splice(msgIdx + 1, 1);
+            }
+            
+            const tempAssistantId = 'temp_assistant_' + questionId;
+            branch.messages.splice(msgIdx + 1, 0, {
+                id: tempAssistantId,
+                role: 'assistant',
+                content: '',
+                timestamp: new Date().toISOString(),
+                model_name: 'AI',
+                _loading: true,
+                _streaming: true,
+                _pendingId: tempAssistantId,
+                _questionId: questionId
+            });
+            
+            const qState = askingQuestions.get(questionId);
+            if (qState) qState.assistantMsgId = tempAssistantId;
+            
+            updateAskingPaperState(askingPaperId, askingBranchId, branch);
+            if (currentBranchId === askingBranchId) {
+                renderMessages();
+            }
+            
+            try {
+                const res = await fetch('/api/papers/' + askingPaperId + '/regenerate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        paper_id: askingPaperId,
+                        branch_id: askingBranchId,
+                        message_id: msgId,
+                        new_question: newQuestion
+                    })
+                });
+                
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                
+                const reader = res.body.getReader();
+                const qState = askingQuestions.get(questionId);
+                if (qState) qState.reader = reader;
+                
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    if (!askingQuestions.has(questionId)) {
+                        break;
+                    }
+                    
+                    const qState = askingQuestions.get(questionId);
+                    if (Date.now() - qState.startTime > 300000) {
+                        console.warn('Request timeout:', questionId);
+                        askingQuestions.delete(questionId);
+                        break;
+                    }
+                    
+                    let readResult;
+                    try {
+                        readResult = await Promise.race([
+                            reader.read(),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Read timeout')), 60000)
+                            )
+                        ]);
+                    } catch (readError) {
+                        console.warn('Read error:', readError);
+                        const errQState = askingQuestions.get(questionId);
+                        if (errQState) {
+                            const errorBranch = branches.find(b => b.id === errQState.branchId);
+                            if (errorBranch && errQState.assistantMsgId) {
+                                const errorMsg = errorBranch.messages.find(m => m.id === errQState.assistantMsgId || m._pendingId === errQState.assistantMsgId);
+                                if (errorMsg) {
+                                    errorMsg._streaming = false;
+                                    errorMsg._loading = false;
+                                    if (!errorMsg.content || errorMsg.content.trim() === '') {
+                                        errorMsg.content = '❌ 读取超时，请重试';
+                                    }
+                                }
+                                updateAskingPaperState(errQState.paperId, errQState.branchId, errorBranch);
+                                if (currentPaperId === errQState.paperId && currentBranchId === errQState.branchId) {
+                                    renderMessages();
+                                }
+                            }
+                            askingQuestions.delete(questionId);
+                        }
+                        break;
+                    }
+                    
+                    const {done, value} = readResult;
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        if (!line.startsWith('data: ')) continue;
+                        
+                        const dataStr = line.slice(6);
+                        if (dataStr === '[DONE]') continue;
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(dataStr);
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', dataStr, e);
+                            continue;
+                        }
+                        
+                        const currentQState = askingQuestions.get(questionId);
+                        let branch = branches.find(b => b.id === askingBranchId);
+                        
+                        if (!branch) {
+                            console.warn('Branch not found:', askingBranchId);
+                            continue;
+                        }
+                        
+                        if (data.status === 'started') {
+                            const oldAssistantMsgId = currentQState?.assistantMsgId;
+                            const newAssistantMsgId = data.assistant_msg_id;
+                            
+                            if (newAssistantMsgId && oldAssistantMsgId) {
+                                const msg = branch.messages.find(m => m.id === oldAssistantMsgId || m._pendingId === oldAssistantMsgId);
+                                if (msg) {
+                                    msg.id = newAssistantMsgId;
+                                    msg._pendingId = newAssistantMsgId;
+                                    msg.model_name = data.model_name;
+                                    const qState = askingQuestions.get(questionId);
+                                    if (qState) qState.assistantMsgId = newAssistantMsgId;
+                                }
+                            } else if (oldAssistantMsgId) {
+                                const msg = branch.messages.find(m => m.id === oldAssistantMsgId || m._pendingId === oldAssistantMsgId);
+                                if (msg) {
+                                    msg.model_name = data.model_name;
+                                }
+                            }
+                            updateAskingPaperState(askingPaperId, askingBranchId, branch);
+                            if (currentPaperId === askingPaperId && currentBranchId === askingBranchId) {
+                                renderMessages();
+                            }
+                        } else if (data.chunk) {
+                            const assistantMsgId = currentQState?.assistantMsgId;
+                            if (assistantMsgId) {
+                                const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                if (msg && msg.role === 'assistant') {
+                                    msg._loading = false;
+                                    msg.content += data.chunk;
+                                }
+                                updateAskingPaperState(askingPaperId, askingBranchId, branch);
+                                if (currentPaperId === askingPaperId && currentBranchId === askingBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                        } else if (data.done && data.message) {
+                            const assistantMsgId = currentQState?.assistantMsgId;
+                            if (assistantMsgId) {
+                                const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                if (msg) {
+                                    msg._streaming = false;
+                                    msg._complete = true;
+                                    msg.id = data.message.id;
+                                    msg.content = data.message.content;
+                                    msg.model_name = data.message.model_name;
+                                    msg.context_tokens = data.message.context_tokens;
+                                }
+                                updateAskingPaperState(askingPaperId, askingBranchId, branch);
+                                if (currentPaperId === askingPaperId && currentBranchId === askingBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                            askingQuestions.delete(questionId);
+                        } else if (data.error) {
+                            const assistantMsgId = currentQState?.assistantMsgId;
+                            if (assistantMsgId) {
+                                const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                if (msg) {
+                                    msg._streaming = false;
+                                    msg._loading = false;
+                                    msg.content = '❌ 请求失败: ' + data.error;
+                                }
+                                updateAskingPaperState(askingPaperId, askingBranchId, branch);
+                                if (currentPaperId === askingPaperId && currentBranchId === askingBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                            askingQuestions.delete(questionId);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('regenerateQuestion error:', e);
+                const qState = askingQuestions.get(questionId);
+                if (qState) {
+                    const branch = branches.find(b => b.id === qState.branchId);
+                    if (branch && qState.assistantMsgId) {
+                        const msg = branch.messages.find(m => m.id === qState.assistantMsgId || m._pendingId === qState.assistantMsgId);
+                        if (msg) {
+                            msg._streaming = false;
+                            msg._loading = false;
+                            msg.content = '❌ 请求失败: ' + e.message;
+                        }
+                        updateAskingPaperState(qState.paperId, qState.branchId, branch);
+                        if (currentPaperId === qState.paperId && currentBranchId === qState.branchId) {
+                            renderMessages();
+                        }
+                    }
+                    askingQuestions.delete(questionId);
+                }
+            }
+        }
+
+        async function askQuestion() {
+            const input = document.getElementById('question-input');
+            const question = input.value.trim();
+            if (!question || !currentPaperId) return;
+            
+            if (askingQuestions.size >= clientConfig.max_concurrent_requests) {
+                alert('请等待当前请求完成后再提问');
+                return;
+            }
+            
+            input.value = '';
+            
+            const askingBranchId = currentBranchId;
+            const askingPaperId = currentPaperId;
+            const questionId = Date.now().toString();
+            
+            saveAskingPaperState();
+            
+            askingQuestions.set(questionId, {
+                paperId: askingPaperId,
+                branchId: askingBranchId,
+                reader: null,
+                userMsgId: null,
+                assistantMsgId: null,
+                startTime: Date.now()
+            });
+            
+            try {
+                const res = await fetch('/api/papers/' + askingPaperId + '/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        paper_id: askingPaperId,
+                        branch_id: askingBranchId,
+                        question
+                    })
+                });
+                
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                
+                const reader = res.body.getReader();
+                const qState = askingQuestions.get(questionId);
+                if (qState) qState.reader = reader;
+                
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    if (!askingQuestions.has(questionId)) {
+                        break;
+                    }
+                    
+                    const qState = askingQuestions.get(questionId);
+                    if (Date.now() - qState.startTime > 300000) {
+                        console.warn('Request timeout:', questionId);
+                        askingQuestions.delete(questionId);
+                        break;
+                    }
+                    
+                    let readResult;
+                    try {
+                        readResult = await Promise.race([
+                            reader.read(),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Read timeout')), 60000)
+                            )
+                        ]);
+                    } catch (readError) {
+                        console.warn('Read error:', readError);
+                        const errQState = askingQuestions.get(questionId);
+                        if (errQState) {
+                            const errorBranch = branches.find(b => b.id === errQState.branchId);
+                            if (errorBranch && errQState.assistantMsgId) {
+                                const errorMsg = errorBranch.messages.find(m => m.id === errQState.assistantMsgId || m._pendingId === errQState.assistantMsgId);
+                                if (errorMsg) {
+                                    errorMsg._streaming = false;
+                                    errorMsg._loading = false;
+                                    if (!errorMsg.content || errorMsg.content.trim() === '') {
+                                        errorMsg.content = '❌ 读取超时，请重试';
+                                    }
+                                }
+                                updateAskingPaperState(errQState.paperId, errQState.branchId, errorBranch);
+                                if (currentPaperId === errQState.paperId && currentBranchId === errQState.branchId) {
+                                    renderMessages();
+                                }
+                            }
+                            askingQuestions.delete(questionId);
+                        }
+                        break;
+                    }
+                    
+                    const {done, value} = readResult;
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        if (!line.startsWith('data: ')) continue;
+                        
+                        const dataStr = line.slice(6);
+                        if (dataStr === '[DONE]') continue;
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(dataStr);
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', dataStr, e);
+                            continue;
+                        }
+                        
+                        const currentQState = askingQuestions.get(questionId);
+                        let branch;
+                        let actualBranchId = currentQState?.branchId || askingBranchId;
+                            
+                            if (data.branch_id && data.branch_id !== actualBranchId) {
+                                actualBranchId = data.branch_id;
+                                if (currentQState) currentQState.branchId = actualBranchId;
+                            }
+                            
+                            if (data.branch_id) {
+                                branch = branches.find(b => b.id === actualBranchId);
+                                if (!branch) {
+                                    branch = {
+                                        id: actualBranchId,
+                                        name: '问答分支',
+                                        messages: [],
+                                        created_at: new Date().toISOString()
+                                    };
+                                    branches.push(branch);
+                                    if (currentPaperId === askingPaperId) {
+                                        currentBranchId = actualBranchId;
+                                    }
+                                    renderBranches();
+                                }
+                            }
+                            
+                            if (!branch && currentPaperId === askingPaperId && actualBranchId) {
+                                branch = branches.find(b => b.id === actualBranchId);
+                            }
+                            
+                            if (!branch) {
+                                const savedState = askingPapers.get(askingPaperId);
+                                if (savedState && actualBranchId) {
+                                    branch = savedState.branches.find(b => b.id === actualBranchId);
+                                }
+                            }
+                            
+                            if (!branch) {
+                                console.warn('Branch not found:', actualBranchId);
+                                continue;
+                            }
+                            
+                            if (data.status === 'started') {
+                                const userMsgId = data.user_msg_id;
+                                const assistantMsgId = data.assistant_msg_id || ('assistant_' + userMsgId);
+                                
+                                const qState = askingQuestions.get(questionId);
+                                if (qState) {
+                                    qState.userMsgId = userMsgId;
+                                    qState.assistantMsgId = assistantMsgId;
+                                }
+                                
+                                const existingUserMsg = branch.messages.find(m => m.id === userMsgId);
+                                if (!existingUserMsg) {
+                                    branch.messages.push({
+                                        id: userMsgId,
+                                        role: 'user',
+                                        content: question,
+                                        timestamp: data.user_msg.timestamp
+                                    });
+                                }
+                                
+                                const existingAssistantMsg = branch.messages.find(m => m.id === assistantMsgId);
+                                if (!existingAssistantMsg) {
+                                    branch.messages.push({
+                                        id: assistantMsgId,
+                                        role: 'assistant',
+                                        content: '',
+                                        timestamp: new Date().toISOString(),
+                                        model_name: data.model_name,
+                                        _loading: true,
+                                        _streaming: true,
+                                        _pendingId: assistantMsgId,
+                                        _questionId: questionId
+                                    });
+                                }
+                                
+                                updateAskingPaperState(askingPaperId, actualBranchId, branch);
+                                
+                                if (currentPaperId === askingPaperId && currentBranchId === actualBranchId) {
+                                    renderMessages();
+                                }
+                            } else if (data.chunk) {
+                                const qState = askingQuestions.get(questionId);
+                                const assistantMsgId = qState?.assistantMsgId;
+                                if (assistantMsgId) {
+                                    const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                    if (msg && msg.role === 'assistant') {
+                                        msg._loading = false;
+                                        msg.content += data.chunk;
+                                    }
+                                    updateAskingPaperState(askingPaperId, actualBranchId, branch);
+                                    if (currentPaperId === askingPaperId && currentBranchId === actualBranchId) {
+                                        renderMessages();
+                                    }
+                                }
+                            } else if (data.done && data.message) {
+                                const qState = askingQuestions.get(questionId);
+                                const assistantMsgId = qState?.assistantMsgId;
+                                if (assistantMsgId) {
+                                    const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                    if (msg) {
+                                        msg._streaming = false;
+                                        msg._complete = true;
+                                        msg.id = data.message.id;
+                                        msg.content = data.message.content;
+                                        msg.model_name = data.message.model_name;
+                                        msg.context_tokens = data.message.context_tokens;
+                                        msg._serverId = data.message.id;
+                                    }
+                                    updateAskingPaperState(askingPaperId, actualBranchId, branch);
+                                    if (currentPaperId === askingPaperId && currentBranchId === actualBranchId) {
+                                        renderMessages();
+                                    }
+                                }
+                                askingQuestions.delete(questionId);
+                            } else if (data.error) {
+                                const qState = askingQuestions.get(questionId);
+                                const assistantMsgId = qState?.assistantMsgId;
+                                if (assistantMsgId) {
+                                    const msg = branch.messages.find(m => m.id === assistantMsgId || m._pendingId === assistantMsgId);
+                                    if (msg) {
+                                        msg._streaming = false;
+                                        msg._loading = false;
+                                        msg.content = '❌ 请求失败: ' + data.error;
+                                    }
+                                    updateAskingPaperState(askingPaperId, actualBranchId, branch);
+                                    if (currentPaperId === askingPaperId && currentBranchId === actualBranchId) {
+                                        renderMessages();
+                                    }
+                                }
+                                askingQuestions.delete(questionId);
+                            }
+                    }
+                }
+            } catch (e) {
+                console.error('askQuestion error:', e);
+                const qState = askingQuestions.get(questionId);
+                if (!qState) return;
+                
+                const askingBranchIdLocal = qState.branchId;
+                const askingPaperIdLocal = qState.paperId;
+                const assistantMsgId = qState.assistantMsgId;
+                
+                let branch;
+                if (currentPaperId === askingPaperIdLocal) {
+                    branch = branches.find(b => b.id === askingBranchIdLocal);
+                }
+                if (!branch) {
+                    const savedState = askingPapers.get(askingPaperIdLocal);
+                    if (savedState) {
+                        branch = savedState.branches.find(b => b.id === askingBranchIdLocal);
+                    }
+                }
+                
+                if (branch && assistantMsgId) {
+                    const msg = branch.messages.find(m => m._pendingId === assistantMsgId);
+                    if (msg) {
+                        msg._streaming = false;
+                        msg._loading = false;
+                        msg.content = '❌ 请求失败: ' + e.message;
+                    }
+                    updateAskingPaperState(askingPaperIdLocal, askingBranchIdLocal, branch);
+                    if (currentPaperId === askingPaperIdLocal && currentBranchId === askingBranchIdLocal) {
+                        renderMessages();
+                    }
+                }
+                askingQuestions.delete(questionId);
+            }
+        }
+        
+        function stopQuestion(questionId) {
+            const state = askingQuestions.get(questionId);
+            if (!state) return;
+            
+            if (state.reader) {
+                try {
+                    state.reader.cancel();
+                } catch (e) {
+                    console.warn('Error cancelling reader:', e);
+                }
+            }
+            
+            const askingPaperIdLocal = state.paperId;
+            const askingBranchIdLocal = state.branchId;
+            
+            let branch;
+            if (currentPaperId === askingPaperIdLocal) {
+                branch = branches.find(b => b.id === askingBranchIdLocal);
+            }
+            if (!branch) {
+                const savedState = askingPapers.get(askingPaperIdLocal);
+                if (savedState) {
+                    branch = savedState.branches.find(b => b.id === askingBranchIdLocal);
+                }
+            }
+            
+            if (branch) {
+                const msg = branch.messages.find(m => m._questionId === questionId);
+                if (msg) {
+                    msg._streaming = false;
+                    msg._loading = false;
+                    if (!msg.content) msg.content = '已停止生成';
+                }
+                updateAskingPaperState(askingPaperIdLocal, askingBranchIdLocal, branch);
+                if (currentPaperId === askingPaperIdLocal && currentBranchId === askingBranchIdLocal) {
+                    renderMessages();
+                }
+            }
+            askingQuestions.delete(questionId);
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                askQuestion();
+            }
+        }
+
+        async function createNewBranch(withContext = false) {
+            if (!currentPaperId) return;
+            
+            const branchName = prompt('请输入分支名称:', `分支 ${branches.length + 1}`);
+            if (branchName === null) return;
+            
+            try {
+                const res = await fetch(`/api/papers/${currentPaperId}/create-branch`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: branchName || `分支 ${branches.length + 1}`,
+                        with_context: withContext
+                    })
+                });
+                
+                if (res.ok) {
+                    const newBranch = await res.json();
+                    branches.push(newBranch);
+                    
+                    document.getElementById('branches-panel').style.display = 'flex';
+                    document.getElementById('branches-toggle-btn').classList.add('has-branches');
+                    document.getElementById('summarize-dropdown').style.display = 'inline-block'; document.getElementById('new-window-btn').style.display = 'inline-block';
+                    
+                    renderBranches();
+                    selectBranch(newBranch.id);
+                } else {
+                    const err = await res.json();
+                    alert('创建分支失败: ' + (err.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('创建分支失败: ' + e.message);
+            }
+        }
+        
+        function toggleNewBranchDropdown() {
+            const dropdown = document.getElementById('new-branch-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        async function summarize(allBranches) {
+            if (!currentPaperId) return;
+            if (!allBranches && !currentBranchId) return;
+            
+            if (summarizingRequests.size >= clientConfig.max_concurrent_requests) {
+                alert('请等待当前请求完成后再总结');
+                return;
+            }
+            
+            const summarizePaperId = currentPaperId;
+            const summarizeBranchId = currentBranchId;
+            const requestId = Date.now().toString();
+            
+            summarizingRequests.set(requestId, {
+                paperId: summarizePaperId,
+                branchId: summarizeBranchId,
+                reader: null,
+                msgId: null,
+                startTime: Date.now()
+            });
+            
+            saveAskingPaperState();
+            
+            try {
+                const requestBody = {
+                    paper_id: summarizePaperId,
+                    all_branches: allBranches
+                };
+                if (!allBranches && summarizeBranchId) {
+                    requestBody.branch_id = summarizeBranchId;
+                }
+                
+                const res = await fetch('/api/papers/' + summarizePaperId + '/summarize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                
+                const reader = res.body.getReader();
+                const sState = summarizingRequests.get(requestId);
+                if (sState) sState.reader = reader;
+                
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let actualBranchId = summarizeBranchId;
+                
+                while (true) {
+                    if (!summarizingRequests.has(requestId)) {
+                        break;
+                    }
+                    
+                    const sState = summarizingRequests.get(requestId);
+                    if (Date.now() - sState.startTime > 300000) {
+                        console.warn('Summarize request timeout:', requestId);
+                        summarizingRequests.delete(requestId);
+                        break;
+                    }
+                    
+                    let readResult;
+                    try {
+                        readResult = await Promise.race([
+                            reader.read(),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Read timeout')), 60000)
+                            )
+                        ]);
+                    } catch (readError) {
+                        console.warn('Read error:', readError);
+                        const errSState = summarizingRequests.get(requestId);
+                        if (errSState) {
+                            const errorBranch = branches.find(b => b.id === errSState.branchId);
+                            if (errorBranch && errSState.msgId) {
+                                const errorMsg = errorBranch.messages.find(m => m.id === errSState.msgId);
+                                if (errorMsg) {
+                                    errorMsg._streaming = false;
+                                    if (!errorMsg.content || errorMsg.content.trim() === '') {
+                                        errorMsg.content = '❌ 读取超时，请重试';
+                                    }
+                                }
+                                updateAskingPaperState(errSState.paperId, errSState.branchId, errorBranch);
+                                if (currentPaperId === errSState.paperId && currentBranchId === errSState.branchId) {
+                                    renderMessages();
+                                }
+                            }
+                            summarizingRequests.delete(requestId);
+                        }
+                        break;
+                    }
+                    
+                    const {done, value} = readResult;
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        if (!line.startsWith('data: ')) continue;
+                        
+                        const dataStr = line.slice(6);
+                        if (dataStr === '[DONE]') continue;
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(dataStr);
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', dataStr, e);
+                            continue;
+                        }
+                        
+                        if (data.branch_id && data.branch_id !== actualBranchId) {
+                            actualBranchId = data.branch_id;
+                            const sState = summarizingRequests.get(requestId);
+                            if (sState) sState.branchId = actualBranchId;
+                        }
+                        
+                        let branch = branches.find(b => b.id === actualBranchId);
+                        
+                        if (!branch) {
+                            branch = {
+                                id: actualBranchId,
+                                name: '总结',
+                                messages: [],
+                                created_at: new Date().toISOString()
+                            };
+                            branches.push(branch);
+                            if (currentPaperId === summarizePaperId) {
+                                currentBranchId = actualBranchId;
+                            }
+                            renderBranches();
+                        }
+                        
+                        if (data.status === 'started') {
+                            const msgId = data.msg_id;
+                            const sState = summarizingRequests.get(requestId);
+                            if (sState) sState.msgId = msgId;
+                            
+                            const existingMsg = branch.messages.find(m => m.id === msgId);
+                            if (!existingMsg) {
+                                branch.messages.push({
+                                    id: msgId,
+                                    role: 'assistant',
+                                    content: '',
+                                    timestamp: new Date().toISOString(),
+                                    model_name: data.model_name,
+                                    context_tokens: data.context_tokens,
+                                    _streaming: true,
+                                    _summarizeId: requestId
+                                });
+                            }
+                            
+                            updateAskingPaperState(summarizePaperId, actualBranchId, branch);
+                            
+                            if (currentPaperId === summarizePaperId && currentBranchId === actualBranchId) {
+                                renderMessages();
+                            }
+                        } else if (data.chunk) {
+                            const sState = summarizingRequests.get(requestId);
+                            const msgId = sState?.msgId;
+                            if (msgId) {
+                                const msg = branch.messages.find(m => m.id === msgId);
+                                if (msg && msg.role === 'assistant') {
+                                    msg.content += data.chunk;
+                                }
+                                updateAskingPaperState(summarizePaperId, actualBranchId, branch);
+                                if (currentPaperId === summarizePaperId && currentBranchId === actualBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                        } else if (data.done && data.message) {
+                            const sState = summarizingRequests.get(requestId);
+                            const msgId = sState?.msgId;
+                            if (msgId) {
+                                const msg = branch.messages.find(m => m.id === msgId);
+                                if (msg) {
+                                    msg._streaming = false;
+                                    msg._complete = true;
+                                    msg.content = data.message.content;
+                                    msg.model_name = data.message.model_name;
+                                    msg.context_tokens = data.message.context_tokens;
+                                }
+                                updateAskingPaperState(summarizePaperId, actualBranchId, branch);
+                                if (currentPaperId === summarizePaperId && currentBranchId === actualBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                            summarizingRequests.delete(requestId);
+                        } else if (data.error) {
+                            const sState = summarizingRequests.get(requestId);
+                            const msgId = sState?.msgId;
+                            if (msgId) {
+                                const msg = branch.messages.find(m => m.id === msgId);
+                                if (msg) {
+                                    msg._streaming = false;
+                                    msg.content = '❌ 总结失败: ' + data.error;
+                                }
+                                updateAskingPaperState(summarizePaperId, actualBranchId, branch);
+                                if (currentPaperId === summarizePaperId && currentBranchId === actualBranchId) {
+                                    renderMessages();
+                                }
+                            }
+                            summarizingRequests.delete(requestId);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('summarize error:', e);
+                const sState = summarizingRequests.get(requestId);
+                if (!sState) return;
+                
+                const branch = branches.find(b => b.id === sState.branchId);
+                if (branch && sState.msgId) {
+                    const msg = branch.messages.find(m => m.id === sState.msgId);
+                    if (msg) {
+                        msg._streaming = false;
+                        msg.content = '❌ 总结失败: ' + e.message;
+                    }
+                    updateAskingPaperState(sState.paperId, sState.branchId, branch);
+                    if (currentPaperId === sState.paperId && currentBranchId === sState.branchId) {
+                        renderMessages();
+                    }
+                }
+                summarizingRequests.delete(requestId);
+            }
+        }
+        
+        function stopSummarize(summarizeId) {
+            const state = summarizingRequests.get(summarizeId);
+            if (!state) return;
+            
+            if (state.reader) {
+                try {
+                    state.reader.cancel();
+                } catch (e) {
+                    console.warn('Error cancelling reader:', e);
+                }
+            }
+            
+            const branch = branches.find(b => b.id === state.branchId);
+            if (branch && state.msgId) {
+                const msg = branch.messages.find(m => m.id === state.msgId);
+                if (msg) {
+                    msg._streaming = false;
+                    if (!msg.content || msg.content.trim() === '') {
+                        msg.content = '已停止生成';
+                    }
+                }
+                updateAskingPaperState(state.paperId, state.branchId, branch);
+                if (currentPaperId === state.paperId && currentBranchId === state.branchId) {
+                    renderMessages();
+                }
+            }
+            
+            summarizingRequests.delete(summarizeId);
+        }
+        
+        function toggleSummarizeDropdown() {
+            const dropdown = document.getElementById('summarize-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+        
+        function openBranchInNewWindow() {
+            if (!currentPaperId || !currentBranchId) {
+                alert('请先选择一个对话分支');
+                return;
+            }
+            const url = '/view/' + currentPaperId + '/' + currentBranchId + '?paper=' + currentPaperId + '&branch=' + currentBranchId;
+            window.open(url, '_blank', 'width=900,height=800');
+        }
+        
+        document.addEventListener('click', function(e) {
+            const summarizeDropdown = document.getElementById('summarize-dropdown');
+            if (summarizeDropdown && !summarizeDropdown.contains(e.target)) {
+                summarizeDropdown.classList.remove('show');
+            }
+            
+            const newBranchDropdown = document.getElementById('new-branch-dropdown');
+            if (newBranchDropdown && !newBranchDropdown.contains(e.target)) {
+                newBranchDropdown.classList.remove('show');
+            }
+        });
+
+        async function deletePaper(paperId) {
+            if (!confirm('确定删除此论文？')) return;
+            await fetch('/api/papers/' + paperId, {method: 'DELETE'});
+            if (currentPaperId === paperId) {
+                currentPaperId = null;
+                currentBranchId = null;
+                document.getElementById('empty-state').style.display = 'flex';
+                document.getElementById('branches-panel').style.display = 'none';
+                document.getElementById('chat-area').style.display = 'none';
+            }
+            fetchPapers();
+        }
+
+        function openConfig() {
+            closeAllPanels();
+            document.getElementById('config-panel').classList.add('open');
+            document.getElementById('overlay').classList.add('open');
+            loadApiConfigs();
+            loadMinerUConfigs();
+            loadPromptConfigs();
+        }
+
+        function closeConfig() {
+            document.getElementById('config-panel').classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            const tabIndex = tab === 'api' ? 1 : tab === 'mineru' ? 2 : tab === 'prompts' ? 3 : 4;
+            document.querySelector(`.tab:nth-child(${tabIndex})`).classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            if (tab === 'client') {
+                loadClientConfig();
+            }
+        }
+
+        async function loadApiConfigs() {
+            const res = await fetch('/api/config/api');
+            const data = await res.json();
+            const container = document.getElementById('api-configs');
+            container.innerHTML = data.configs.map(c => `
+                <div class="config-item ${c.id === data.current_id ? 'active' : ''}">
+                    <div class="config-item-header">
+                        <span class="config-item-name">${c.name} ${c.id === data.current_id ? '<span class="badge badge-active">当前使用</span>' : ''}</span>
+                        <div class="config-item-actions">
+                            ${c.id !== data.current_id ? `<button class="btn btn-outline" onclick="setCurrentApi('${c.id}')">使用</button>` : ''}
+                            <button class="btn btn-danger btn-small" onclick="deleteApiConfig('${c.id}')">删除</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:#656d76">${c.base_url} | ${c.model}</div>
+                </div>
+            `).join('');
+        }
+
+        function showApiForm() { document.getElementById('api-form').style.display = 'block'; }
+        function hideApiForm() { document.getElementById('api-form').style.display = 'none'; }
+
+        async function saveApiConfig() {
+            const data = {
+                name: document.getElementById('api-name').value,
+                base_url: document.getElementById('api-base-url').value,
+                api_key: document.getElementById('api-key').value,
+                model: document.getElementById('api-model').value
+            };
+            await fetch('/api/config/api', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            hideApiForm();
+            loadApiConfigs();
+        }
+
+        async function setCurrentApi(id) {
+            await fetch(`/api/config/api/${id}/set-current`, {method: 'POST'});
+            loadApiConfigs();
+        }
+
+        async function deleteApiConfig(id) {
+            await fetch(`/api/config/api/${id}`, {method: 'DELETE'});
+            loadApiConfigs();
+        }
+
+        async function loadMinerUConfigs() {
+            const res = await fetch('/api/config/mineru');
+            const data = await res.json();
+            const container = document.getElementById('mineru-configs');
+            container.innerHTML = data.configs.map(c => `
+                <div class="config-item ${c.id === data.current_id ? 'active' : ''}">
+                    <div class="config-item-header">
+                        <span class="config-item-name">${c.name} ${c.id === data.current_id ? '<span class="badge badge-active">当前使用</span>' : ''}</span>
+                        <div class="config-item-actions">
+                            ${c.id !== data.current_id ? `<button class="btn btn-outline" onclick="setCurrentMinerU('${c.id}')">使用</button>` : ''}
+                            <button class="btn btn-danger btn-small" onclick="deleteMinerUConfig('${c.id}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showMinerUForm() { document.getElementById('mineru-form').style.display = 'block'; }
+        function hideMinerUForm() { document.getElementById('mineru-form').style.display = 'none'; }
+
+        async function saveMinerUConfig() {
+            const data = {
+                name: document.getElementById('mineru-name').value,
+                token: document.getElementById('mineru-token').value
+            };
+            await fetch('/api/config/mineru', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            hideMinerUForm();
+            loadMinerUConfigs();
+        }
+
+        async function setCurrentMinerU(id) {
+            await fetch(`/api/config/mineru/${id}/set-current`, {method: 'POST'});
+            loadMinerUConfigs();
+        }
+
+        async function deleteMinerUConfig(id) {
+            await fetch(`/api/config/mineru/${id}`, {method: 'DELETE'});
+            loadMinerUConfigs();
+        }
+
+        async function loadPromptConfigs() {
+            const res = await fetch('/api/config/prompts');
+            const configs = await res.json();
+            const container = document.getElementById('prompt-configs');
+            container.innerHTML = configs.map(c => `
+                <div class="config-item ${c.is_enabled ? 'active' : 'disabled'}">
+                    <div class="config-item-header">
+                        <span class="config-item-name">${c.name} ${c.is_enabled ? '<span class="badge badge-active">已启用</span>' : '<span class="badge badge-disabled">已禁用</span>'}</span>
+                        <div class="config-item-actions">
+                            <button class="btn ${c.is_enabled ? 'btn-outline' : 'btn-secondary'}" onclick="togglePrompt('${c.id}', ${!c.is_enabled})">${c.is_enabled ? '禁用' : '启用'}</button>
+                            <button class="btn btn-danger btn-small" onclick="deletePromptConfig('${c.id}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showPromptForm() { document.getElementById('prompt-form').style.display = 'block'; }
+        function hidePromptForm() { document.getElementById('prompt-form').style.display = 'none'; }
+
+        async function savePromptConfig() {
+            const data = {
+                name: document.getElementById('prompt-name').value,
+                prompt: document.getElementById('prompt-content').value
+            };
+            await fetch('/api/config/prompts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            hidePromptForm();
+            loadPromptConfigs();
+        }
+
+        async function togglePrompt(id, enabled) {
+            await fetch(`/api/config/prompts/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({is_enabled: enabled})
+            });
+            loadPromptConfigs();
+        }
+
+        async function deletePromptConfig(id) {
+            await fetch(`/api/config/prompts/${id}`, {method: 'DELETE'});
+            loadPromptConfigs();
+        }
+        
+        async function loadClientConfig() {
+            try {
+                const res = await fetch('/api/config/client');
+                const config = await res.json();
+                
+                document.getElementById('client-max-concurrent').value = config.max_concurrent_requests || 5;
+                document.getElementById('client-request-timeout').value = config.request_timeout || 120;
+                document.getElementById('client-total-timeout').value = config.total_request_timeout || 300;
+                document.getElementById('client-batch-delay').value = config.batch_import_delay || 2;
+            } catch (e) {
+                console.error('Failed to load client config:', e);
+            }
+        }
+        
+        async function saveClientConfig() {
+            const config = {
+                max_concurrent_requests: parseInt(document.getElementById('client-max-concurrent').value) || 5,
+                request_timeout: parseInt(document.getElementById('client-request-timeout').value) || 120,
+                total_request_timeout: parseInt(document.getElementById('client-total-timeout').value) || 300,
+                batch_import_delay: parseInt(document.getElementById('client-batch-delay').value) || 2
+            };
+            
+            try {
+                const res = await fetch('/api/config/client', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                
+                if (res.ok) {
+                    clientConfig = config;
+                    alert('配置已保存');
+                } else {
+                    alert('保存失败');
+                }
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+        
+        function showBatchImportHelp() {
+            alert(`批量导入 JSON 格式说明：
+
+支持两种格式：
+
+1. 简单数组格式（只包含链接）：
+[
+  "https://arxiv.org/pdf/2502.21321",
+  "https://example.com/paper.pdf"
+]
+
+2. 详细对象数组格式：
+[
+  {
+    "link": "https://arxiv.org/abs/2502.21321",
+    "title": "论文标题（可选）"
+  }
+]
+
+注意：
+- arXiv 摘要链接（/abs/）会自动转换为 PDF 链接（/pdf/）
+- 导入过程中请勿关闭页面
+- 并发数受配置限制（当前：${clientConfig.max_concurrent_requests}）`);
+        }
+        
+        let batchImportState = {
+            total: 0,
+            completed: 0,
+            failed: 0,
+            running: false,
+            queue: [],
+            results: []
+        };
+        
+        function convertToPdfUrl(url) {
+            if (!url) return null;
+            
+            url = url.trim();
+            
+            // arXiv abs -> PDF
+            const arxivAbsMatch = url.match(/arxiv\.org\/abs\/(\d+\.\d+)/i);
+            if (arxivAbsMatch) {
+                return `https://arxiv.org/pdf/${arxivAbsMatch[1]}`;
+            }
+            
+            // arXiv pdf already
+            if (url.match(/arxiv\.org\/pdf\//i)) {
+                return url;
+            }
+            
+            // OpenReview
+            if (url.includes('openreview.net/forum?id=')) {
+                const idMatch = url.match(/id=([^&]+)/);
+                if (idMatch) {
+                    return `https://openreview.net/pdf?id=${idMatch[1]}`;
+                }
+            }
+            
+            // ACL Anthology
+            if (url.includes('aclanthology.org/') && !url.endsWith('.pdf')) {
+                return url.replace(/\/$/, '') + '.pdf';
+            }
+            
+            return url;
+        }
+        
+        async function handleBatchImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                let papers = JSON.parse(text);
+                
+                if (!Array.isArray(papers)) {
+                    alert('JSON 文件格式错误：需要一个数组');
+                    return;
+                }
+                
+                const urls = [];
+                for (const item of papers) {
+                    let url, title;
+                    if (typeof item === 'string') {
+                        url = item;
+                    } else if (item && typeof item === 'object') {
+                        url = item.link || item.url || item.pdf_url;
+                        title = item.title;
+                    }
+                    
+                    if (url) {
+                        const pdfUrl = convertToPdfUrl(url);
+                        if (pdfUrl) {
+                            urls.push({ url: pdfUrl, title: title || null });
+                        }
+                    }
+                }
+                
+                if (urls.length === 0) {
+                    alert('未找到有效的论文链接');
+                    return;
+                }
+                
+                if (!confirm(`发现 ${urls.length} 个论文链接，是否开始批量导入？`)) {
+                    return;
+                }
+                
+                startBatchImport(urls);
+            } catch (e) {
+                alert('解析 JSON 文件失败: ' + e.message);
+            }
+            
+            event.target.value = '';
+        }
+        
+        async function startBatchImport(urls) {
+            batchImportState = {
+                total: urls.length,
+                completed: 0,
+                failed: 0,
+                running: true,
+                queue: [...urls],
+                results: []
+            };
+            
+            document.getElementById('batch-import-status').style.display = 'block';
+            updateBatchImportProgress();
+            
+            const concurrency = clientConfig.max_concurrent_requests;
+            const workers = [];
+            
+            for (let i = 0; i < concurrency; i++) {
+                workers.push(batchImportWorker());
+            }
+            
+            await Promise.all(workers);
+            
+            batchImportState.running = false;
+            updateBatchImportProgress();
+            
+            const successCount = batchImportState.results.filter(r => r.success).length;
+            const failCount = batchImportState.results.filter(r => !r.success).length;
+            
+            alert(`批量导入完成！\n成功: ${successCount}\n失败: ${failCount}`);
+            
+            await fetchPapers();
+            renderPaperList();
+        }
+        
+        async function batchImportWorker() {
+            while (batchImportState.queue.length > 0 && batchImportState.running) {
+                const item = batchImportState.queue.shift();
+                if (!item) break;
+                
+                const result = await importSinglePaper(item);
+                batchImportState.results.push(result);
+                batchImportState.completed++;
+                if (!result.success) batchImportState.failed++;
+                updateBatchImportProgress();
+                
+                if (clientConfig.batch_import_delay > 0) {
+                    await new Promise(r => setTimeout(r, clientConfig.batch_import_delay * 1000));
+                }
+            }
+        }
+        
+        async function importSinglePaper(item) {
+            try {
+                const res = await fetch('/api/papers/extract-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: item.url })
+                });
+                
+                if (!res.ok) {
+                    return { url: item.url, title: item.title, success: false, error: `HTTP ${res.status}` };
+                }
+                
+                // 等待解析完成
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const text = decoder.decode(value);
+                    const lines = text.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') continue;
+                            
+                            try {
+                                const data = JSON.parse(dataStr);
+                                if (data.status === 'done') {
+                                    return { url: item.url, title: item.title, success: true, paper_id: data.paper_id };
+                                } else if (data.status === 'error') {
+                                    return { url: item.url, title: item.title, success: false, error: data.message };
+                                }
+                            } catch {}
+                        }
+                    }
+                }
+                
+                return { url: item.url, title: item.title, success: false, error: '未收到完成信号' };
+            } catch (e) {
+                return { url: item.url, title: item.title, success: false, error: e.message };
+            }
+        }
+        
+        function updateBatchImportProgress() {
+            const progressDiv = document.getElementById('batch-import-progress');
+            const { total, completed, failed, running, queue, results } = batchImportState;
+            const pending = queue.length;
+            const inProgress = running ? Math.min(clientConfig.max_concurrent_requests, pending + results.length - completed) : 0;
+            const success = results.filter(r => r.success).length;
+            
+            let html = `<div style="margin-bottom:8px">`;
+            html += `总计: ${total} | 完成: ${success} | 失败: ${failed} | 剩余: ${pending}`;
+            html += `</div>`;
+            
+            // 进度条
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            html += `<div class="progress-bar" style="margin-bottom:8px"><div class="progress-bar-fill" style="width:${percent}%"></div></div>`;
+            
+            // 最近的结果
+            const recentResults = results.slice(-5).reverse();
+            if (recentResults.length > 0) {
+                html += `<div style="max-height:100px;overflow-y:auto;font-size:12px;color:#656d76">`;
+                for (const r of recentResults) {
+                    const icon = r.success ? '✓' : '✗';
+                    const color = r.success ? '#1a7f37' : '#cf222e';
+                    const display = r.title || r.url;
+                    const truncated = display.length > 50 ? display.substring(0, 50) + '...' : display;
+                    html += `<div style="color:${color}">${icon} ${truncated}</div>`;
+                }
+                html += `</div>`;
+            }
+            
+            if (!running && completed > 0) {
+                const failedItems = results.filter(r => !r.success);
+                if (failedItems.length > 0) {
+                    html += `<details style="margin-top:8px;font-size:12px">`;
+                    html += `<summary style="cursor:pointer;color:#656d76">失败列表 (${failedItems.length})</summary>`;
+                    html += `<div style="margin-top:4px;max-height:150px;overflow-y:auto">`;
+                    for (const r of failedItems) {
+                        html += `<div style="color:#cf222e;margin:2px 0">• ${r.title || r.url}: ${r.error || '未知错误'}</div>`;
+                    }
+                    html += `</div></details>`;
+                }
+            }
+            
+            progressDiv.innerHTML = html;
+        }
+
+        function showUploadModal() {
+            document.getElementById('empty-state').style.display = 'flex';
+            document.getElementById('branches-panel').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('current-paper-name').textContent = '上传文档';
+            document.getElementById('edit-title-btn').style.display = 'none';
+            document.getElementById('analyze-btn').style.display = 'none';
+            document.getElementById('new-branch-dropdown').style.display = 'none';
+            document.getElementById('summarize-dropdown').style.display = 'none'; document.getElementById('new-window-btn').style.display = 'none';
+            currentPaperId = null;
+            currentBranchId = null;
+            renderPaperList();
+        }
+
+        fetchPapers();
+    </script>
+</body>
+</html>

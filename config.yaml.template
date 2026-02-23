@@ -1,0 +1,83 @@
+# 论文阅读助手配置文件模板
+# 复制此文件为 config.yaml 并填入您的实际配置
+
+# LLM API 配置列表
+# 可以配置多个 API，使用 name 区分
+llm_apis:
+  - name: "OpenAI"
+    base_url: "https://api.openai.com/v1"
+    api_key: "your-openai-api-key-here"  # 替换为您的 API Key
+    model: "gpt-4"
+    is_default: true
+  
+  - name: "DeepSeek"
+    base_url: "https://api.deepseek.com/v1"
+    api_key: "your-deepseek-api-key-here"  # 替换为您的 API Key
+    model: "deepseek-chat"
+    is_default: false
+  
+  - name: "自定义API"
+    base_url: "https://your-api-endpoint.com/v1"
+    api_key: "your-custom-api-key-here"
+    model: "your-model-name"
+    is_default: false
+
+# MinerU PDF 解析配置
+# 在 https://mineru.net 申请 Token
+mineru:
+  - name: "MinerU"
+    token: "your-mineru-token-here"  # 替换为您的 MinerU Token
+    is_default: true
+
+# 预设的论文解读提示词
+# 每个提示词会生成一个独立的解读分支
+prompts:
+  - name: "通用解读"
+    prompt: |
+      请对这篇论文进行全面的分析和解读，包括：
+      1. 研究背景和动机
+      2. 核心方法和创新点
+      3. 主要实验结果
+      4. 结论和局限性
+    is_enabled: true
+
+  - name: "通俗解读"
+    prompt: |
+      请用通俗易懂的语言解释这篇论文的主要内容和贡献，让非专业人士也能理解。
+    is_enabled: true
+
+  - name: "技术细节"
+    prompt: |
+      请深入分析这篇论文的技术细节，包括：
+      1. 具体的算法和模型架构
+      2. 数学推导和公式解释
+      3. 实验设置和超参数
+      4. 代码实现要点
+    is_enabled: true
+
+  - name: "关键贡献"
+    prompt: |
+      请总结这篇论文的3-5个关键贡献，每个贡献用一句话概括，并说明其重要性。
+    is_enabled: false
+
+  - name: "相关工作"
+    prompt: |
+      请分析这篇论文与相关工作的关系：
+      1. 论文引用的主要相关工作有哪些
+      2. 本论文相比已有工作的改进之处
+      3. 本论文可能影响的研究方向
+    is_enabled: false
+
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8000
+  file_server_port: 8765
+
+# 客户端配置
+client:
+  max_concurrent_requests: 5        # 最大并发请求数
+  request_timeout: 120             # 单个请求超时时间（秒）
+  total_request_timeout: 300       # 请求总超时时间（秒）
+  cleanup_interval: 60             # 清理过期状态的间隔（秒）
+  batch_import_delay: 2            # 批量导入时每个任务的间隔（秒）
